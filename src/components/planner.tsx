@@ -2,13 +2,16 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { format, isSameDay } from "date-fns";
-import { Plus, Sun, Moon } from "lucide-react";
+import { Plus, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { TaskDialog } from "@/components/task-dialog";
 import { TaskList } from "@/components/task-list";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import type { Task } from "@/lib/types";
+import { useAuth } from "@/contexts/auth-context";
 
 const initialTasks: Task[] = [
   { id: "1", title: "Morning yoga session", details: "30 minutes of vinyasa flow.", deadline: new Date(), completed: true },
@@ -18,14 +21,22 @@ const initialTasks: Task[] = [
 
 
 export function Planner() {
+  const { user, signOut } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
+  const getStorageKey = useMemo(() => {
+    return user ? `tasks-${user.uid}` : null;
+  }, [user]);
+
+
   useEffect(() => {
+    if (!getStorageKey) return;
+
     try {
-      const storedTasks = localStorage.getItem("tasks");
+      const storedTasks = localStorage.getItem(getStorageKey);
       if (storedTasks) {
         const parsedTasks = JSON.parse(storedTasks, (key, value) => {
           if (key === 'deadline') return new Date(value);
@@ -39,15 +50,16 @@ export function Planner() {
       console.error("Failed to load tasks from localStorage", error);
       setTasks(initialTasks);
     }
-  }, []);
+  }, [getStorageKey]);
 
   useEffect(() => {
+    if (!getStorageKey) return;
     try {
-      localStorage.setItem("tasks", JSON.stringify(tasks));
+      localStorage.setItem(getStorageKey, JSON.stringify(tasks));
     } catch (error) {
       console.error("Failed to save tasks to localStorage", error);
     }
-  }, [tasks]);
+  }, [tasks, getStorageKey]);
 
   const handleAddTask = (taskData: Omit<Task, "id" | "completed">) => {
     const newTask: Task = {
@@ -97,10 +109,39 @@ export function Planner() {
         <h1 className="text-3xl sm:text-4xl font-bold text-primary-foreground/90 font-headline">
           GreenDay Planner
         </h1>
-        <Button onClick={openAddDialog} style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Task
-        </Button>
+        <div className="flex items-center gap-4">
+          <Button onClick={openAddDialog} style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Task
+          </Button>
+          {user && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                  <Avatar>
+                    <AvatarImage src={user.photoURL ?? ''} alt={user.displayName ?? 'User'} />
+                    <AvatarFallback>{user.displayName?.charAt(0).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">{user.displayName}</p>
+                    <p className="text-xs leading-none text-muted-foreground">
+                      {user.email}
+                    </p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={signOut} className="cursor-pointer">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
       </header>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
