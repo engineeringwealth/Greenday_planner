@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useAuth } from '@/contexts/auth-context';
@@ -27,6 +28,17 @@ const signUpSchema = z.object({
 export default function LoginPage() {
   const { signInWithGoogle, user, loading, isFirebaseConfigured, signInWithEmail, signUpWithEmail } = useAuth();
   const router = useRouter();
+
+  useEffect(() => {
+    // This log helps debug the "auth/unauthorized-domain" error.
+    // It prints the exact hostname that needs to be whitelisted in Firebase.
+    if (typeof window !== 'undefined') {
+      console.log(
+        "Please ensure this hostname is in your Firebase project's 'Authorized domains' list:",
+        window.location.hostname
+      );
+    }
+  }, []);
 
   useEffect(() => {
     if (!loading && user) {
