@@ -12,80 +12,91 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import type { Task } from "@/lib/types";
 import { useAuth } from "@/contexts/auth-context";
-
-const initialTasks: Task[] = [
-  { id: "1", title: "Morning yoga session", details: "30 minutes of vinyasa flow.", deadline: new Date(), completed: true },
-  { id: "2", title: "Team meeting", details: "Discuss Q3 project goals.", deadline: new Date(), completed: false },
-  { id: "3", title: "Design new landing page", details: "Focus on UX and mobile responsiveness.", deadline: new Date(), completed: false },
-];
+import * as taskService from "@/services/task-service";
+import { useToast } from "@/hooks/use-toast";
 
 
 export function Planner() {
   const { user, signOut } = useAuth();
+  const { toast } = useToast();
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [isLoadingTasks, setIsLoadingTasks] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
-  const getStorageKey = useMemo(() => {
-    return user ? `tasks-${user.uid}` : null;
-  }, [user]);
-
-
   useEffect(() => {
-    if (!getStorageKey) return;
-
-    try {
-      const storedTasks = localStorage.getItem(getStorageKey);
-      if (storedTasks) {
-        const parsedTasks = JSON.parse(storedTasks, (key, value) => {
-          if (key === 'deadline') return new Date(value);
-          return value;
-        });
-        setTasks(parsedTasks);
-      } else {
-        setTasks(initialTasks);
-      }
-    } catch (error) {
-      console.error("Failed to load tasks from localStorage", error);
-      setTasks(initialTasks);
+    if (user) {
+      setIsLoadingTasks(true);
+      taskService.getTasks(user.uid)
+        .then(setTasks)
+        .catch(error => {
+            console.error("Failed to fetch tasks:", error);
+            toast({
+                title: "Error",
+                description: "Could not fetch your tasks from the database.",
+                variant: "destructive"
+            });
+        })
+        .finally(() => setIsLoadingTasks(false));
+    } else {
+        setTasks([]);
+        setIsLoadingTasks(false);
     }
-  }, [getStorageKey]);
+  }, [user, toast]);
 
-  useEffect(() => {
-    if (!getStorageKey) return;
+  const handleAddTask = async (taskData: Omit<Task, "id" | "completed">) => {
+    if (!user) return;
     try {
-      localStorage.setItem(getStorageKey, JSON.stringify(tasks));
-    } catch (error) {
-      console.error("Failed to save tasks to localStorage", error);
+        const newTask = await taskService.addTask(user.uid, taskData);
+        setTasks((prev) => [...prev, newTask]);
+    } catch(error) {
+        console.error("Failed to add task:", error);
+        toast({ title: "Error", description: "Failed to add new task.", variant: "destructive" });
     }
-  }, [tasks, getStorageKey]);
-
-  const handleAddTask = (taskData: Omit<Task, "id" | "completed">) => {
-    const newTask: Task = {
-      ...taskData,
-      id: crypto.randomUUID(),
-      completed: false,
-    };
-    setTasks((prev) => [...prev, newTask]);
   };
 
-  const handleEditTask = (taskData: Task) => {
-    setTasks((prev) =>
-      prev.map((t) => (t.id === taskData.id ? taskData : t))
-    );
+  const handleEditTask = async (taskData: Task) => {
+    if (!user) return;
+    try {
+        await taskService.updateTask(user.uid, taskData.id, taskData);
+        setTasks((prev) =>
+            prev.map((t) => (t.id === taskData.id ? taskData : t))
+        );
+    } catch(error) {
+        console.error("Failed to update task:", error);
+        toast({ title: "Error", description: "Failed to save changes.", variant: "destructive" });
+    }
   };
 
-  const handleDeleteTask = (taskId: string) => {
-    setTasks((prev) => prev.filter((t) => t.id !== taskId));
+  const handleDeleteTask = async (taskId: string) => {
+    if (!user) return;
+    try {
+        await taskService.deleteTask(user.uid, taskId);
+        setTasks((prev) => prev.filter((t) => t.id !== taskId));
+    } catch (error) {
+        console.error("Failed to delete task:", error);
+        toast({ title: "Error", description: "Failed to delete task.", variant: "destructive" });
+    }
   };
 
-  const handleToggleComplete = (taskId: string) => {
-    setTasks((prev) =>
-      prev.map((t) =>
-        t.id === taskId ? { ...t, completed: !t.completed } : t
-      )
-    );
+  const handleToggleComplete = async (taskId: string) => {
+    if (!user) return;
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) return;
+
+    const updatedCompleted = !task.completed;
+    try {
+        await taskService.updateTask(user.uid, taskId, { completed: updatedCompleted });
+        setTasks((prev) =>
+            prev.map((t) =>
+                t.id === taskId ? { ...t, completed: updatedCompleted } : t
+            )
+        );
+    } catch (error) {
+        console.error("Failed to toggle task completion:", error);
+        toast({ title: "Error", description: "Failed to update task status.", variant: "destructive" });
+    }
   };
 
   const openEditDialog = (task: Task) => {
@@ -168,6 +179,7 @@ export function Planner() {
             <CardContent>
               <TaskList
                 tasks={filteredTasks}
+                isLoading={isLoadingTasks}
                 onToggleComplete={handleToggleComplete}
                 onEdit={openEditDialog}
                 onDelete={handleDeleteTask}
