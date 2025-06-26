@@ -134,7 +134,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm shadow-xl">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold">Welcome</CardTitle>
-          <CardDescription>Sign in or create an account to continue.</CardDescription>
+          <CardDescription>Welcome to GreenDay Planner! Sign in or create an account to continue.</CardDescription>
         </CardHeader>
         <CardContent>
           {isFirebaseConfigured ? (
