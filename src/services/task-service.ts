@@ -5,10 +5,11 @@ import {
   addDoc,
   deleteDoc,
   doc,
-  getDocs,
+  onSnapshot,
   query,
   Timestamp,
   updateDoc,
+  orderBy,
 } from 'firebase/firestore';
 
 if (!db) {
@@ -19,36 +20,41 @@ const getTasksCollection = (userId: string) => {
   return collection(db, 'users', userId, 'tasks');
 };
 
-export const getTasks = async (userId: string): Promise<Task[]> => {
+export const getTasks = (
+    userId: string, 
+    onTasksUpdated: (tasks: Task[]) => void,
+    onError: (error: Error) => void
+): (() => void) => {
   const tasksCollection = getTasksCollection(userId);
-  const q = query(tasksCollection);
-  const querySnapshot = await getDocs(q);
+  const q = query(tasksCollection, orderBy('deadline', 'desc'));
   
-  return querySnapshot.docs.map(doc => {
-    const data = doc.data();
-    return {
-      id: doc.id,
-      title: data.title,
-      details: data.details,
-      completed: data.completed,
-      deadline: (data.deadline as Timestamp).toDate(),
-    };
+  const unsubscribe = onSnapshot(q, querySnapshot => {
+    const tasks = querySnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        title: data.title,
+        details: data.details,
+        completed: data.completed,
+        deadline: (data.deadline as Timestamp).toDate(),
+      };
+    });
+    onTasksUpdated(tasks);
+  }, (error) => {
+    console.error("Error fetching tasks:", error);
+    onError(new Error("Failed to fetch real-time tasks."));
   });
+
+  return unsubscribe;
 };
 
-export const addTask = async (userId: string, taskData: Omit<Task, 'id' | 'completed'>): Promise<Task> => {
+export const addTask = async (userId: string, taskData: Omit<Task, 'id' | 'completed'>): Promise<void> => {
   const tasksCollection = getTasksCollection(userId);
-  const docRef = await addDoc(tasksCollection, {
+  await addDoc(tasksCollection, {
     ...taskData,
     completed: false,
     deadline: Timestamp.fromDate(taskData.deadline),
   });
-
-  return {
-    ...taskData,
-    id: docRef.id,
-    completed: false,
-  };
 };
 
 export const updateTask = async (userId: string, taskId: string, taskData: Partial<Omit<Task, 'id'>>): Promise<void> => {
