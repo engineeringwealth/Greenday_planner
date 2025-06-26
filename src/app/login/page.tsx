@@ -5,9 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Terminal } from 'lucide-react';
 
 export default function LoginPage() {
-  const { signInWithGoogle, user, loading } = useAuth();
+  const { signInWithGoogle, user, loading, isFirebaseConfigured } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -41,14 +43,28 @@ export default function LoginPage() {
           <CardDescription>Sign in to access your GreenDay Planner.</CardDescription>
         </CardHeader>
         <CardContent>
-          <Button
-            onClick={signInWithGoogle}
-            className="w-full"
-            variant="outline"
-          >
-            <GoogleIcon />
-            Sign in with Google
-          </Button>
+          {isFirebaseConfigured ? (
+            <Button
+              onClick={signInWithGoogle}
+              className="w-full"
+              variant="outline"
+            >
+              <GoogleIcon />
+              Sign in with Google
+            </Button>
+          ) : (
+            <Alert variant="destructive">
+              <Terminal className="h-4 w-4" />
+              <AlertTitle>Firebase Not Configured</AlertTitle>
+              <AlertDescription>
+                Your Firebase API key is missing. Please add it to your{' '}
+                <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold">
+                  .env.local
+                </code>{' '}
+                file.
+              </AlertDescription>
+            </Alert>
+          )}
         </CardContent>
       </Card>
     </main>
