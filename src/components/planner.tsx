@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -28,17 +29,20 @@ export function Planner() {
   useEffect(() => {
     if (user) {
       setIsLoadingTasks(true);
-      taskService.getTasks(user.uid)
-        .then(setTasks)
-        .catch(error => {
-            console.error("Failed to fetch tasks:", error);
-            toast({
-                title: "Error",
-                description: "Could not fetch your tasks from the database.",
-                variant: "destructive"
-            });
-        })
-        .finally(() => setIsLoadingTasks(false));
+      const unsubscribe = taskService.getTasks(user.uid, (newTasks) => {
+        setTasks(newTasks);
+        setIsLoadingTasks(false);
+      }, (error) => {
+        console.error("Failed to fetch tasks:", error);
+        toast({
+            title: "Error",
+            description: "Could not fetch your tasks from the database.",
+            variant: "destructive"
+        });
+        setIsLoadingTasks(false);
+      });
+
+      return () => unsubscribe();
     } else {
         setTasks([]);
         setIsLoadingTasks(false);
@@ -48,8 +52,7 @@ export function Planner() {
   const handleAddTask = async (taskData: Omit<Task, "id" | "completed">) => {
     if (!user) return;
     try {
-        const newTask = await taskService.addTask(user.uid, taskData);
-        setTasks((prev) => [...prev, newTask]);
+        await taskService.addTask(user.uid, taskData);
     } catch(error) {
         console.error("Failed to add task:", error);
         toast({ title: "Error", description: "Failed to add new task.", variant: "destructive" });
@@ -60,9 +63,6 @@ export function Planner() {
     if (!user) return;
     try {
         await taskService.updateTask(user.uid, taskData.id, taskData);
-        setTasks((prev) =>
-            prev.map((t) => (t.id === taskData.id ? taskData : t))
-        );
     } catch(error) {
         console.error("Failed to update task:", error);
         toast({ title: "Error", description: "Failed to save changes.", variant: "destructive" });
@@ -73,7 +73,6 @@ export function Planner() {
     if (!user) return;
     try {
         await taskService.deleteTask(user.uid, taskId);
-        setTasks((prev) => prev.filter((t) => t.id !== taskId));
     } catch (error) {
         console.error("Failed to delete task:", error);
         toast({ title: "Error", description: "Failed to delete task.", variant: "destructive" });
@@ -88,11 +87,6 @@ export function Planner() {
     const updatedCompleted = !task.completed;
     try {
         await taskService.updateTask(user.uid, taskId, { completed: updatedCompleted });
-        setTasks((prev) =>
-            prev.map((t) =>
-                t.id === taskId ? { ...t, completed: updatedCompleted } : t
-            )
-        );
     } catch (error) {
         console.error("Failed to toggle task completion:", error);
         toast({ title: "Error", description: "Failed to update task status.", variant: "destructive" });
@@ -117,9 +111,12 @@ export function Planner() {
   return (
     <div className="container mx-auto p-4 sm:p-6 lg:p-8">
       <header className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl sm:text-4xl font-bold text-primary-foreground/90 font-headline">
-          GreenDay Planner
-        </h1>
+        <div>
+          <h1 className="text-3xl sm:text-4xl font-bold text-primary-foreground/90 font-headline">
+            GreenDay Planner
+          </h1>
+          <p className="text-muted-foreground mt-1">Your personal space to organize and conquer your day.</p>
+        </div>
         <div className="flex items-center gap-4">
           <Button onClick={openAddDialog} style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}>
             <Plus className="mr-2 h-4 w-4" />
