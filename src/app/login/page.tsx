@@ -7,9 +7,25 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+
+const signInSchema = z.object({
+  email: z.string().email({ message: "Invalid email address." }),
+  password: z.string().min(1, { message: "Password cannot be empty." }),
+});
+
+const signUpSchema = z.object({
+  email: z.string().email({ message: "Invalid email address." }),
+  password: z.string().min(6, { message: "Password must be at least 6 characters." }),
+});
 
 export default function LoginPage() {
-  const { signInWithGoogle, user, loading, isFirebaseConfigured } = useAuth();
+  const { signInWithGoogle, user, loading, isFirebaseConfigured, signInWithEmail, signUpWithEmail } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -26,6 +42,72 @@ export default function LoginPage() {
       <path fill="#1976D2" d="M43.611 20.083H24v8h11.303a12.016 12.016 0 01-4.832 7.323l6.522 5.33C45.386 36.885 48 30.773 48 24c0-2.115-.183-4.164-.529-6.168L43.611 20.083z" />
     </svg>
   );
+  
+  const SignInForm = () => {
+    const form = useForm<z.infer<typeof signInSchema>>({
+      resolver: zodResolver(signInSchema),
+      defaultValues: { email: "", password: "" },
+    });
+    
+    const onSubmit = (values: z.infer<typeof signInSchema>) => {
+      signInWithEmail(values.email, values.password);
+    };
+
+    return (
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <FormField control={form.control} name="email" render={({ field }) => (
+            <FormItem>
+              <FormLabel>Email</FormLabel>
+              <FormControl><Input placeholder="m@example.com" {...field} /></FormControl>
+              <FormMessage />
+            </FormItem>
+          )} />
+          <FormField control={form.control} name="password" render={({ field }) => (
+            <FormItem>
+              <FormLabel>Password</FormLabel>
+              <FormControl><Input type="password" {...field} /></FormControl>
+              <FormMessage />
+            </FormItem>
+          )} />
+          <Button type="submit" className="w-full">Sign In</Button>
+        </form>
+      </Form>
+    );
+  };
+  
+  const SignUpForm = () => {
+    const form = useForm<z.infer<typeof signUpSchema>>({
+      resolver: zodResolver(signUpSchema),
+      defaultValues: { email: "", password: "" },
+    });
+    
+    const onSubmit = (values: z.infer<typeof signUpSchema>) => {
+      signUpWithEmail(values.email, values.password);
+    };
+
+    return (
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <FormField control={form.control} name="email" render={({ field }) => (
+            <FormItem>
+              <FormLabel>Email</FormLabel>
+              <FormControl><Input placeholder="m@example.com" {...field} /></FormControl>
+              <FormMessage />
+            </FormItem>
+          )} />
+          <FormField control={form.control} name="password" render={({ field }) => (
+            <FormItem>
+              <FormLabel>Password</FormLabel>
+              <FormControl><Input type="password" {...field} /></FormControl>
+              <FormMessage />
+            </FormItem>
+          )} />
+          <Button type="submit" className="w-full">Create Account</Button>
+        </form>
+      </Form>
+    );
+  };
 
   if (loading || user) {
     return (
@@ -39,19 +121,49 @@ export default function LoginPage() {
     <main className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-sm shadow-xl">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
-          <CardDescription>Sign in to access your GreenDay Planner.</CardDescription>
+          <CardTitle className="text-2xl font-bold">Welcome</CardTitle>
+          <CardDescription>Sign in or create an account to continue.</CardDescription>
         </CardHeader>
         <CardContent>
           {isFirebaseConfigured ? (
-            <Button
-              onClick={signInWithGoogle}
-              className="w-full"
-              variant="outline"
-            >
+            <>
+            <Tabs defaultValue="signin" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="signin">Sign In</TabsTrigger>
+                <TabsTrigger value="signup">Sign Up</TabsTrigger>
+              </TabsList>
+              <TabsContent value="signin">
+                <Card>
+                  <CardContent className="pt-6">
+                    <SignInForm />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              <TabsContent value="signup">
+                <Card>
+                  <CardContent className="pt-6">
+                    <SignUpForm />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+            
+            <div className="relative my-4">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  Or continue with
+                </span>
+              </div>
+            </div>
+
+            <Button onClick={signInWithGoogle} className="w-full" variant="outline">
               <GoogleIcon />
               Sign in with Google
             </Button>
+            </>
           ) : (
             <Alert variant="destructive">
               <Terminal className="h-4 w-4" />
