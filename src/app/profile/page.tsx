@@ -74,8 +74,13 @@ function ProfilePageContent() {
         },
     });
 
-    const { watch, setValue } = form;
-    const formValues = watch();
+    const { watch, setValue, getValues } = form;
+
+    // Watch individual fields. This prevents the infinite loop.
+    const height = watch('height');
+    const currentWeight = watch('currentWeight');
+    const desiredWeight = watch('desiredWeight');
+    const goalTimeline = watch('goalTimeline');
 
     useEffect(() => {
         if (userProfile) {
@@ -93,19 +98,18 @@ function ProfilePageContent() {
                 goalTimeline: userProfile.goalTimeline,
             };
 
-            if (displayUnits === 'metric') {
-                if (displayValues.height) displayValues.height = round(displayValues.height * 2.54);
-                if (displayValues.currentWeight) displayValues.currentWeight = round(displayValues.currentWeight * 0.453592);
-                if (displayValues.desiredWeight) displayValues.desiredWeight = round(displayValues.desiredWeight * 0.453592);
+            if (displayUnits === 'metric' && displayValues.height && displayValues.currentWeight && displayValues.desiredWeight) {
+                displayValues.height = round(displayValues.height * 2.54);
+                displayValues.currentWeight = round(displayValues.currentWeight * 0.453592);
+                displayValues.desiredWeight = round(displayValues.desiredWeight * 0.453592);
             }
             
             form.reset(displayValues);
         }
     }, [userProfile, user, form]);
-
+    
+    // This effect now correctly depends on individual values
     useEffect(() => {
-        const { currentWeight, desiredWeight, goalTimeline, height } = formValues;
-        
         // Calculate BMI
         if (currentWeight && height && units) {
             let imperialWeight = currentWeight;
@@ -129,10 +133,14 @@ function ProfilePageContent() {
             }
             
             const calorieGoal = calculateDailyCalorieGoal(imperialCurrentWeight, imperialDesiredWeight, goalTimeline);
-            setValue('dailyCalorieGoal', calorieGoal, { shouldValidate: true });
+            
+            // Only update the form if the calculated value is different.
+            if (getValues('dailyCalorieGoal') !== calorieGoal) {
+              setValue('dailyCalorieGoal', calorieGoal, { shouldValidate: true });
+            }
         }
 
-    }, [formValues, units, setValue]);
+    }, [height, currentWeight, desiredWeight, goalTimeline, units, setValue, getValues]);
 
     const handleUnitChange = (newUnit: UserProfile['units']) => {
         if (units === newUnit) return;
