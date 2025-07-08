@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal } from 'lucide-react';
+import { Terminal, Loader2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -26,7 +26,16 @@ const signUpSchema = z.object({
 });
 
 export default function LoginPage() {
-  const { signInWithGoogle, user, loading, isFirebaseConfigured, signInWithEmail, signUpWithEmail } = useAuth();
+  const { 
+    user, 
+    loading, 
+    userProfile, 
+    profileLoading, 
+    isFirebaseConfigured,
+    signInWithGoogle, 
+    signInWithEmail, 
+    signUpWithEmail 
+  } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -41,10 +50,15 @@ export default function LoginPage() {
   }, []);
 
   useEffect(() => {
-    if (!loading && user) {
-      router.push('/');
+    // Wait for auth and profile to be loaded
+    if (!loading && !profileLoading) {
+      if (user && userProfile?.onboarded) {
+        router.push('/');
+      } else if (user && (!userProfile || !userProfile.onboarded)) {
+        router.push('/onboarding');
+      }
     }
-  }, [user, loading, router]);
+  }, [user, userProfile, loading, profileLoading, router]);
 
   const GoogleIcon = () => (
     <svg className="mr-2 h-4 w-4" viewBox="0 0 48 48" aria-hidden="true">
@@ -121,10 +135,11 @@ export default function LoginPage() {
     );
   };
 
-  if (loading || user) {
+  if (loading || profileLoading || user) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <p>Loading...</p>
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <p className="ml-4">Loading your experience...</p>
       </div>
     );
   }

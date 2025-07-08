@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { LogOut, CalendarIcon, ChevronDown, Home, LineChart, Camera, Sparkles, Zap, Flame, Droplets } from "lucide-react";
+import { LogOut, CalendarIcon, ChevronDown, Home, LineChart, Camera, Zap, Flame, Droplets } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -99,13 +99,13 @@ function MacroCard({ title, value, icon: Icon, colorClass }: { title: string, va
 }
 
 export function CalorieTracker() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, userProfile } = useAuth();
   const { toast } = useToast();
   const [mealLogs, setMealLogs] = useState<MealLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const dailyGoal = 2000;
+  const dailyGoal = userProfile?.dailyCalorieGoal ?? 2000;
 
   useEffect(() => {
     if (user) {

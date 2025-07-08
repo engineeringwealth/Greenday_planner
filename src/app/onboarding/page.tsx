@@ -1,0 +1,190 @@
+
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useAuth } from '@/contexts/auth-context';
+import { useRouter } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { updateUserProfile } from '@/services/user-service';
+import { Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+
+const onboardingSchema = z.object({
+  currentWeight: z.coerce.number().min(1, 'Current weight is required.'),
+  desiredWeight: z.coerce.number().min(1, 'Desired weight is required.'),
+  goalTimeline: z.coerce.number().min(1, 'Please select a timeline.'),
+});
+
+const calculateDailyCalorieGoal = (currentWeight: number, desiredWeight: number, timelineInWeeks: number) => {
+  const weightDifferenceLbs = currentWeight - desiredWeight;
+  const totalCalorieDifference = weightDifferenceLbs * 3500;
+  const days = timelineInWeeks * 7;
+  
+  if (days <= 0) return 2000; // Fallback for safety
+
+  const dailyCalorieDelta = totalCalorieDifference / days;
+  
+  // Simple TDEE estimate: current weight (lbs) * 14
+  const estimatedTDEE = currentWeight * 14;
+  
+  const goal = Math.round(estimatedTDEE - dailyCalorieDelta);
+
+  // Clamp the goal to a reasonable range
+  return Math.max(1200, Math.min(4000, goal));
+};
+
+export default function OnboardingPage() {
+  const { user, userProfile, profileLoading, refetchUserProfile } = useAuth();
+  const router = useRouter();
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    // If user is already onboarded, redirect them away from this page.
+    if (!profileLoading && userProfile?.onboarded) {
+      router.push('/');
+    }
+  }, [userProfile, profileLoading, router]);
+
+  const form = useForm<z.infer<typeof onboardingSchema>>({
+    resolver: zodResolver(onboardingSchema),
+    defaultValues: {
+      currentWeight: undefined,
+      desiredWeight: undefined,
+      goalTimeline: undefined,
+    },
+  });
+
+  const onSubmit = async (values: z.infer<typeof onboardingSchema>) => {
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to continue.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsSubmitting(true);
+    try {
+      const dailyCalorieGoal = calculateDailyCalorieGoal(values.currentWeight, values.desiredWeight, values.goalTimeline);
+      
+      await updateUserProfile(user.uid, {
+        currentWeight: values.currentWeight,
+        desiredWeight: values.desiredWeight,
+        goalTimeline: values.goalTimeline,
+        dailyCalorieGoal,
+        onboarded: true,
+      });
+
+      await refetchUserProfile(); // Force a refresh of the user profile in the context
+      toast({ title: "Profile Updated!", description: "Your calorie goal has been set." });
+      router.push('/');
+
+    } catch (error) {
+      console.error("Onboarding failed:", error);
+      toast({
+        title: "Submission Failed",
+        description: "Could not save your profile. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+        setIsSubmitting(false);
+    }
+  };
+
+  if (profileLoading || !user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  // If user is already onboarded, this component will redirect.
+  // We can show a loading state until the redirect happens.
+  if (userProfile?.onboarded) {
+    return (
+         <div className="flex min-h-screen items-center justify-center">
+            <p>Redirecting...</p>
+         </div>
+    )
+  }
+
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-md shadow-xl">
+        <CardHeader>
+          <CardTitle className="text-2xl font-bold">Welcome to SnapCalTracker!</CardTitle>
+          <CardDescription>Let's set up your goals to personalize your experience.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <FormField
+                control={form.control}
+                name="currentWeight"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Current Weight (lbs)</FormLabel>
+                    <FormControl>
+                      <Input type="number" placeholder="150" {...field} onChange={e => field.onChange(parseFloat(e.target.value))}/>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="desiredWeight"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Desired Weight (lbs)</FormLabel>
+                    <FormControl>
+                      <Input type="number" placeholder="140" {...field} onChange={e => field.onChange(parseFloat(e.target.value))}/>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="goalTimeline"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Goal Timeline</FormLabel>
+                    <Select onValueChange={(value) => field.onChange(parseInt(value))} defaultValue={field.value?.toString()}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a timeframe" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="4">4 Weeks</SelectItem>
+                        <SelectItem value="8">8 Weeks</SelectItem>
+                        <SelectItem value="12">12 Weeks</SelectItem>
+                        <SelectItem value="16">16 Weeks</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save and Continue
+              </Button>
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
+    </main>
+  );
+}

@@ -17,3 +17,12 @@ export interface MealLog {
   totalFat: number;
   photoUrl: string; // For this version, we store the dataURI. In a real app, upload to storage and get a URL
 }
+
+export interface UserProfile {
+  uid: string;
+  onboarded: boolean;
+  currentWeight: number;
+  desiredWeight: number;
+  goalTimeline: number; // in weeks
+  dailyCalorieGoal: number;
+}
