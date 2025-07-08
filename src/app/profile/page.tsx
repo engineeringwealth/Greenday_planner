@@ -18,13 +18,41 @@ import { AuthGuard } from '@/components/auth-guard';
 import Link from 'next/link';
 import type { UserProfile } from '@/lib/types';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const profileSchema = z.object({
   name: z.string().min(1, 'Name is required.'),
   height: z.coerce.number().min(1, 'Height is required.').optional(),
   currentWeight: z.coerce.number().min(1, 'Current weight is required.'),
+  desiredWeight: z.coerce.number().min(1, 'Desired weight is required.'),
+  goalTimeline: z.coerce.number().min(1, 'Please select a timeline.'),
   dailyCalorieGoal: z.coerce.number().min(1000, 'Calorie goal must be at least 1000.').max(10000, 'Calorie goal seems too high.'),
 });
+
+
+// Helper functions for calculations
+const calculateDailyCalorieGoal = (currentWeight: number, desiredWeight: number, timelineInWeeks: number) => {
+    const weightDifferenceLbs = currentWeight - desiredWeight;
+    const totalCalorieDifference = weightDifferenceLbs * 3500;
+    const days = timelineInWeeks * 7;
+    
+    if (days <= 0) return 2000;
+  
+    const dailyCalorieDelta = totalCalorieDifference / days;
+    const estimatedTDEE = currentWeight * 14;
+    const goal = Math.round(estimatedTDEE - dailyCalorieDelta);
+  
+    return Math.max(1200, Math.min(4000, goal));
+};
+
+const calculateBmi = (weightLbs: number, heightInches: number) => {
+    if (!weightLbs || !heightInches || heightInches <= 0) return null;
+    const weightKg = weightLbs * 0.453592;
+    const heightM = heightInches * 0.0254;
+    const bmi = weightKg / (heightM * heightM);
+    return Math.round(bmi * 10) / 10;
+};
+
 
 function ProfilePageContent() {
     const { user, userProfile, profileLoading, refetchUserProfile } = useAuth();
@@ -32,6 +60,7 @@ function ProfilePageContent() {
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [units, setUnits] = useState<UserProfile['units']>('imperial');
+    const [calculatedBmi, setCalculatedBmi] = useState<number | null>(null);
 
     const form = useForm<z.infer<typeof profileSchema>>({
         resolver: zodResolver(profileSchema),
@@ -39,45 +68,86 @@ function ProfilePageContent() {
             name: '',
             height: undefined,
             currentWeight: undefined,
+            desiredWeight: undefined,
+            goalTimeline: undefined,
             dailyCalorieGoal: undefined,
         },
     });
+
+    const { watch, setValue } = form;
+    const formValues = watch();
 
     useEffect(() => {
         if (userProfile) {
             const displayUnits = userProfile.units || 'imperial';
             setUnits(displayUnits);
 
+            const round = (num: number) => Math.round(num * 10) / 10;
+
             const displayValues = {
                 name: userProfile.name || user?.displayName || '',
                 dailyCalorieGoal: userProfile.dailyCalorieGoal,
                 height: userProfile.height,
                 currentWeight: userProfile.currentWeight,
+                desiredWeight: userProfile.desiredWeight,
+                goalTimeline: userProfile.goalTimeline,
             };
-
-            const round = (num: number) => Math.round(num * 10) / 10;
 
             if (displayUnits === 'metric') {
                 if (displayValues.height) displayValues.height = round(displayValues.height * 2.54);
                 if (displayValues.currentWeight) displayValues.currentWeight = round(displayValues.currentWeight * 0.453592);
+                if (displayValues.desiredWeight) displayValues.desiredWeight = round(displayValues.desiredWeight * 0.453592);
             }
             
             form.reset(displayValues);
         }
     }, [userProfile, user, form]);
 
+    useEffect(() => {
+        const { currentWeight, desiredWeight, goalTimeline, height } = formValues;
+        
+        // Calculate BMI
+        if (currentWeight && height && units) {
+            let imperialWeight = currentWeight;
+            let imperialHeight = height;
+            if (units === 'metric') {
+                imperialWeight = currentWeight / 0.453592;
+                imperialHeight = height / 2.54;
+            }
+            const bmi = calculateBmi(imperialWeight, imperialHeight);
+            setCalculatedBmi(bmi);
+        }
+
+        // Calculate recommended calorie goal
+        if (currentWeight && desiredWeight && goalTimeline && units) {
+            let imperialCurrentWeight = currentWeight;
+            let imperialDesiredWeight = desiredWeight;
+
+            if (units === 'metric') {
+                imperialCurrentWeight = currentWeight / 0.453592;
+                imperialDesiredWeight = desiredWeight / 0.453592;
+            }
+            
+            const calorieGoal = calculateDailyCalorieGoal(imperialCurrentWeight, imperialDesiredWeight, goalTimeline);
+            setValue('dailyCalorieGoal', calorieGoal, { shouldValidate: true });
+        }
+
+    }, [formValues, units, setValue]);
+
     const handleUnitChange = (newUnit: UserProfile['units']) => {
         if (units === newUnit) return;
 
-        const { height, currentWeight } = form.getValues();
+        const { height, currentWeight, desiredWeight } = form.getValues();
         const round = (num: number) => Math.round(num * 10) / 10;
         
         if (newUnit === 'metric') {
             if (height) form.setValue('height', round(height * 2.54), { shouldValidate: true });
             if (currentWeight) form.setValue('currentWeight', round(currentWeight * 0.453592), { shouldValidate: true });
+            if (desiredWeight) form.setValue('desiredWeight', round(desiredWeight * 0.453592), { shouldValidate: true });
         } else { // newUnit is 'imperial'
             if (height) form.setValue('height', round(height / 2.54), { shouldValidate: true });
             if (currentWeight) form.setValue('currentWeight', round(currentWeight / 0.453592), { shouldValidate: true });
+            if (desiredWeight) form.setValue('desiredWeight', round(desiredWeight / 0.453592), { shouldValidate: true });
         }
 
         setUnits(newUnit);
@@ -95,6 +165,7 @@ function ProfilePageContent() {
             if (units === 'metric') {
                 if(values.height) imperialValues.height = values.height / 2.54;
                 imperialValues.currentWeight = values.currentWeight / 0.453592;
+                imperialValues.desiredWeight = values.desiredWeight / 0.453592;
             }
 
             // Only add a weight history entry if the weight has changed
@@ -106,6 +177,8 @@ function ProfilePageContent() {
                 name: imperialValues.name,
                 height: imperialValues.height,
                 currentWeight: imperialValues.currentWeight,
+                desiredWeight: imperialValues.desiredWeight,
+                goalTimeline: imperialValues.goalTimeline,
                 dailyCalorieGoal: imperialValues.dailyCalorieGoal,
                 units,
             });
@@ -183,22 +256,53 @@ function ProfilePageContent() {
                                     <FormMessage />
                                 </FormItem>
                             )} />
+                             <FormField control={form.control} name="height" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Height ({units === 'imperial' ? 'in' : 'cm'})</FormLabel>
+                                    <FormControl><Input type="number" step="0.1" placeholder={units === 'imperial' ? "65" : "165"} {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
                             <div className="grid grid-cols-2 gap-4">
-                                <FormField control={form.control} name="height" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Height ({units === 'imperial' ? 'in' : 'cm'})</FormLabel>
-                                        <FormControl><Input type="number" step="0.1" placeholder={units === 'imperial' ? "65" : "165"} {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
-                                <FormField control={form.control} name="currentWeight" render={({ field }) => (
+                               <FormField control={form.control} name="currentWeight" render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Weight ({units === 'imperial' ? 'lbs' : 'kg'})</FormLabel>
                                         <FormControl><Input type="number" step="0.1" placeholder={units === 'imperial' ? "150" : "68"} {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )} />
+                               <FormField control={form.control} name="desiredWeight" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Desired Weight ({units === 'imperial' ? 'lbs' : 'kg'})</FormLabel>
+                                        <FormControl><Input type="number" step="0.1" placeholder={units === 'imperial' ? "140" : "64"} {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )} />
                             </div>
+                            <FormField control={form.control} name="goalTimeline" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Goal Timeline</FormLabel>
+                                    <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
+                                    <FormControl>
+                                        <SelectTrigger><SelectValue placeholder="Select a timeframe" /></SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="4">4 Weeks</SelectItem>
+                                        <SelectItem value="8">8 Weeks</SelectItem>
+                                        <SelectItem value="12">12 Weeks</SelectItem>
+                                        <SelectItem value="16">16 Weeks</SelectItem>
+                                    </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}/>
+
+                            {calculatedBmi && (
+                                <div className="text-sm p-3 bg-muted/50 rounded-lg">
+                                    Your calculated BMI is <span className="font-bold text-foreground">{calculatedBmi.toFixed(1)}</span>.
+                                </div>
+                            )}
+
                             <FormField control={form.control} name="dailyCalorieGoal" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Daily Calorie Goal (kcal)</FormLabel>
