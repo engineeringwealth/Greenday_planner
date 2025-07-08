@@ -1,45 +1,43 @@
+
 "use client";
 
-import { TaskCard } from "@/components/task-card";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { Task } from "@/lib/types";
+import type { MealLog } from "@/lib/types";
+import { MealCard } from "@/components/task-card";
+import { Camera } from "lucide-react";
 
-interface TaskListProps {
-  tasks: Task[];
+interface DailyLogProps {
+  mealLogs: MealLog[];
   isLoading: boolean;
-  onToggleComplete: (id: string) => void;
-  onEdit: (task: Task) => void;
   onDelete: (id: string) => void;
 }
 
-export function TaskList({ tasks, isLoading, onToggleComplete, onEdit, onDelete }: TaskListProps) {
+export function DailyLog({ mealLogs, isLoading, onDelete }: DailyLogProps) {
   if (isLoading) {
     return (
       <div className="space-y-3">
-        <Skeleton className="h-[76px] w-full rounded-lg" />
-        <Skeleton className="h-[76px] w-full rounded-lg" />
-        <Skeleton className="h-[76px] w-full rounded-lg" />
+        <Skeleton className="h-[120px] w-full rounded-lg" />
+        <Skeleton className="h-[120px] w-full rounded-lg" />
       </div>
     );
   }
 
-  if (tasks.length === 0) {
+  if (mealLogs.length === 0) {
     return (
       <div className="text-center py-10 px-4 border-2 border-dashed rounded-lg">
-        <h3 className="text-lg font-medium text-muted-foreground">No tasks scheduled for this day.</h3>
-        <p className="text-sm text-muted-foreground/80 mt-1">Enjoy your free time or add a new task!</p>
+        <Camera className="mx-auto h-12 w-12 text-muted-foreground" />
+        <h3 className="mt-2 text-lg font-medium text-muted-foreground">No meals logged today.</h3>
+        <p className="text-sm text-muted-foreground/80 mt-1">Click "Log Meal" to get started!</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-3">
-      {tasks.map((task) => (
-        <TaskCard
-          key={task.id}
-          task={task}
-          onToggleComplete={onToggleComplete}
-          onEdit={onEdit}
+      {mealLogs.map((log) => (
+        <MealCard
+          key={log.id}
+          mealLog={log}
           onDelete={onDelete}
         />
       ))}

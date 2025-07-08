@@ -133,8 +133,8 @@ export default function LoginPage() {
     <main className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-sm shadow-xl">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Welcome</CardTitle>
-          <CardDescription>Welcome to GreenDay Planner! Sign in or create an account to continue.</CardDescription>
+          <CardTitle className="text-2xl font-bold">SnapCalTracker</CardTitle>
+          <CardDescription>Track calories effortlessly. Sign in to continue.</CardDescription>
         </CardHeader>
         <CardContent>
           {isFirebaseConfigured ? (

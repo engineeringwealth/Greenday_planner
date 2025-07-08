@@ -4,8 +4,8 @@ import { Toaster } from "@/components/ui/toaster"
 import { Providers } from './providers';
 
 export const metadata: Metadata = {
-  title: 'GreenDay Planner',
-  description: 'A simple daily planner to organize tasks and events efficiently.',
+  title: 'SnapCalTracker',
+  description: 'The AI-powered app to track your calories with a snap.',
 };
 
 export default function RootLayout({

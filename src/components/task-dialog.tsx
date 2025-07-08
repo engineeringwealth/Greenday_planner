@@ -1,145 +1,207 @@
+
 "use client";
 
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
+import { useState, useRef, useEffect } from "react";
+import { Camera, Loader2, Upload, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Textarea } from "@/components/ui/textarea";
-import type { Task } from "@/lib/types";
-import { useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { analyzeMeal, type AnalyzeMealOutput } from "@/ai/flows/analyze-meal-flow";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import type { MealLog, FoodItem } from "@/lib/types";
 
-const formSchema = z.object({
-  title: z.string().min(1, { message: "Title cannot be empty." }),
-  details: z.string().optional(),
-  deadline: z.date({ required_error: "A deadline is required." }),
-});
-
-type FormValues = z.infer<typeof formSchema>;
-
-interface TaskDialogProps {
+interface MealCaptureDialogProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
-  onSubmit: (data: any) => void;
-  initialData?: Task | null;
+  onSubmit: (data: Omit<MealLog, "id" | "createdAt">) => void;
 }
 
-export function TaskDialog({ isOpen, setIsOpen, onSubmit, initialData }: TaskDialogProps) {
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      title: "",
-      details: "",
-      deadline: new Date(),
-    },
-  });
+export function MealCaptureDialog({ isOpen, setIsOpen, onSubmit }: MealCaptureDialogProps) {
+  const { toast } = useToast();
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
+  const [hasCameraPermission, setHasCameraPermission] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<AnalyzeMealOutput | null>(null);
+  const [photoDataUri, setPhotoDataUri] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
-    if (initialData) {
-      form.reset({
-        title: initialData.title,
-        details: initialData.details || "",
-        deadline: initialData.deadline,
-      });
-    } else {
-      form.reset({
-        title: "",
-        details: "",
-        deadline: new Date(),
-      });
+    if (isOpen) {
+      const getCameraPermission = async () => {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          setError("Camera not supported on this device.");
+          return;
+        }
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          setHasCameraPermission(true);
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+          }
+        } catch (err) {
+          console.error('Error accessing camera:', err);
+          setHasCameraPermission(false);
+          setError("Camera access denied. Please enable camera permissions in your browser settings.");
+        }
+      };
+      getCameraPermission();
+
+      return () => {
+        if (videoRef.current && videoRef.current.srcObject) {
+          const stream = videoRef.current.srcObject as MediaStream;
+          stream.getTracks().forEach(track => track.stop());
+        }
+      }
     }
-  }, [initialData, isOpen, form]);
+  }, [isOpen]);
 
+  const resetState = () => {
+      setIsAnalyzing(false);
+      setAnalysisResult(null);
+      setPhotoDataUri(null);
+      setError(null);
+  }
 
-  const handleFormSubmit = (data: FormValues) => {
-    onSubmit({ ...initialData, ...data });
+  const handleClose = () => {
+    resetState();
     setIsOpen(false);
+  }
+
+  const capturePhoto = () => {
+    if (!videoRef.current || !canvasRef.current) return;
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const context = canvas.getContext('2d');
+    context?.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+    const dataUri = canvas.toDataURL('image/jpeg');
+    setPhotoDataUri(dataUri);
   };
 
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setPhotoDataUri(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleAnalyze = async () => {
+    if (!photoDataUri) return;
+    setIsAnalyzing(true);
+    setError(null);
+    setAnalysisResult(null);
+    try {
+      const result = await analyzeMeal({ photoDataUri });
+      if (!result.foodItems || result.foodItems.length === 0) {
+        throw new Error("Could not identify any food items. Please try another photo.");
+      }
+      setAnalysisResult(result);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "An unknown error occurred during analysis.";
+      setError(errorMessage);
+      toast({ title: "Analysis Failed", description: errorMessage, variant: "destructive" });
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+  
+  const handleLogMeal = () => {
+    if (!analysisResult || !photoDataUri) return;
+
+    const totalCalories = analysisResult.foodItems.reduce((sum, item) => sum + item.calories, 0);
+    const totalProtein = analysisResult.foodItems.reduce((sum, item) => sum + item.protein, 0);
+    const totalCarbs = analysisResult.foodItems.reduce((sum, item) => sum + item.carbs, 0);
+    const totalFat = analysisResult.foodItems.reduce((sum, item) => sum + item.fat, 0);
+    
+    onSubmit({
+        foodItems: analysisResult.foodItems,
+        totalCalories,
+        totalProtein,
+        totalCarbs,
+        totalFat,
+        photoUrl: photoDataUri, // In a real app, upload this to storage and get a URL
+    });
+    handleClose();
+  };
+
+
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="sm:max-w-[425px]">
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose()}}>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{initialData ? "Edit Task" : "Add a new task"}</DialogTitle>
+          <DialogTitle>Log a Meal</DialogTitle>
           <DialogDescription>
-            {initialData ? "Update the details of your task." : "Fill in the details for your new task."}
+            Capture a photo of your meal for AI analysis or upload an image.
           </DialogDescription>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 py-4">
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Title</FormLabel>
-                  <FormControl>
-                    <Input placeholder="E.g., Finish project proposal" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="details"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Details (Optional)</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Add any extra details here..." {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="deadline"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Deadline</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setIsOpen(false)}>Cancel</Button>
-              <Button type="submit" style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}>{initialData ? "Save Changes" : "Create Task"}</Button>
-            </DialogFooter>
-          </form>
-        </Form>
+        <div className="space-y-4">
+          {error && <Alert variant="destructive"><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
+          
+          {!photoDataUri && (
+            <div className="space-y-4">
+              <div className="w-full aspect-video bg-muted rounded-md overflow-hidden relative">
+                <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
+                {!hasCameraPermission && <div className="absolute inset-0 flex items-center justify-center text-muted-foreground"><p>Waiting for camera...</p></div>}
+              </div>
+              <canvas ref={canvasRef} className="hidden" />
+              <div className="flex gap-2">
+                <Button onClick={capturePhoto} disabled={!hasCameraPermission} className="w-full">
+                  <Camera className="mr-2 h-4 w-4" /> Snap Photo
+                </Button>
+                <Button onClick={() => fileInputRef.current?.click()} variant="outline" className="w-full">
+                  <Upload className="mr-2 h-4 w-4" /> Upload
+                </Button>
+                <input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={handleFileChange} />
+              </div>
+            </div>
+          )}
+
+          {photoDataUri && !analysisResult && (
+             <div className="space-y-4">
+                <img src={photoDataUri} alt="Meal preview" className="rounded-md w-full" />
+                <Button onClick={handleAnalyze} disabled={isAnalyzing} className="w-full">
+                  {isAnalyzing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                  {isAnalyzing ? "Analyzing..." : "Analyze Meal"}
+                </Button>
+             </div>
+          )}
+
+          {analysisResult && (
+            <div className="space-y-4">
+                <img src={photoDataUri!} alt="Analyzed meal" className="rounded-md w-full" />
+                <Card>
+                    <CardHeader><CardTitle>Analysis Result</CardTitle></CardHeader>
+                    <CardContent className="text-sm space-y-2">
+                        {analysisResult.foodItems.map((item, index) => (
+                            <div key={index} className="grid grid-cols-2 gap-2">
+                                <span>{item.name}</span>
+                                <span className="text-right">{item.calories} kcal</span>
+                            </div>
+                        ))}
+                        <hr />
+                        <div className="grid grid-cols-2 gap-2 font-bold">
+                           <span>Total Calories</span>
+                           <span className="text-right">{analysisResult.foodItems.reduce((acc, i) => acc + i.calories, 0)} kcal</span>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+          )}
+
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="ghost" onClick={handleClose}>Cancel</Button>
+          {analysisResult && <Button onClick={handleLogMeal} style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}>Log Meal</Button>}
+          {photoDataUri && <Button type="button" variant="outline" onClick={() => setPhotoDataUri(null)}>Retake</Button>}
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

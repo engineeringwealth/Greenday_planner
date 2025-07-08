@@ -1,58 +1,51 @@
 "use client";
 
-import { format } from "date-fns";
-import { Edit, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import type { Task } from "@/lib/types";
+import { Card, CardContent } from "@/components/ui/card";
+import type { MealLog } from "@/lib/types";
+import Image from 'next/image';
 
-interface TaskCardProps {
-  task: Task;
-  onToggleComplete: (id: string) => void;
-  onEdit: (task: Task) => void;
+interface MealCardProps {
+  mealLog: MealLog;
   onDelete: (id: string) => void;
 }
 
-export function TaskCard({ task, onToggleComplete, onEdit, onDelete }: TaskCardProps) {
+export function MealCard({ mealLog, onDelete }: MealCardProps) {
+  const mainFoodItem = mealLog.foodItems[0]?.name || "Meal";
+  const otherItemsCount = mealLog.foodItems.length - 1;
+
   return (
-    <Card className="transition-all hover:shadow-md bg-card/80">
-      <CardContent className="p-4 flex items-start gap-4">
-        <div className="flex-none pt-1">
-          <Checkbox
-            id={`task-${task.id}`}
-            checked={task.completed}
-            onCheckedChange={() => onToggleComplete(task.id)}
-            className="w-5 h-5"
-            aria-label={`Mark ${task.title} as complete`}
+    <Card className="transition-all hover:shadow-md bg-card/80 overflow-hidden">
+      <CardContent className="p-0 flex">
+        <div className="w-1/3 flex-shrink-0">
+          <Image
+            src={mealLog.photoUrl}
+            alt={mainFoodItem}
+            width={150}
+            height={150}
+            className="w-full h-full object-cover"
+            data-ai-hint="meal food"
           />
         </div>
-        <div className="flex-grow">
-          <label
-            htmlFor={`task-${task.id}`}
-            className={`font-medium text-base transition-all duration-300 ${
-              task.completed ? "line-through text-muted-foreground" : "text-card-foreground"
-            }`}
-          >
-            {task.title}
-          </label>
-          {task.details && (
-            <p className={`text-sm mt-1 transition-all duration-300 ${
-              task.completed ? "line-through text-muted-foreground/80" : "text-muted-foreground"
-            }`}>
-              {task.details}
-            </p>
-          )}
-        </div>
-        <div className="flex-none flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(task)}>
-            <Edit className="h-4 w-4" />
-            <span className="sr-only">Edit Task</span>
-          </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/80 hover:text-destructive" onClick={() => onDelete(task.id)}>
-            <Trash2 className="h-4 w-4" />
-            <span className="sr-only">Delete Task</span>
-          </Button>
+        <div className="flex-grow p-4">
+          <div className="flex justify-between items-start">
+            <div>
+              <h3 className="font-semibold text-lg">
+                {mainFoodItem}{otherItemsCount > 0 && ` + ${otherItemsCount} more`}
+              </h3>
+              <p className="text-primary font-bold text-xl">{mealLog.totalCalories} kcal</p>
+            </div>
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/80 hover:text-destructive" onClick={() => onDelete(mealLog.id)}>
+              <Trash2 className="h-4 w-4" />
+              <span className="sr-only">Delete Log</span>
+            </Button>
+          </div>
+          <div className="flex justify-between text-xs text-muted-foreground mt-2">
+            <span>Protein: {mealLog.totalProtein}g</span>
+            <span>Carbs: {mealLog.totalCarbs}g</span>
+            <span>Fat: {mealLog.totalFat}g</span>
+          </div>
         </div>
       </CardContent>
     </Card>
