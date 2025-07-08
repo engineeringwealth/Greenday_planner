@@ -12,7 +12,7 @@ import { format } from 'date-fns';
 import { Bar, BarChart as RechartsBarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, ReferenceLine } from 'recharts';
 import { ChartTooltipContent } from '@/components/ui/chart';
 import type { UserProfile, WeightHistoryEntry } from '@/lib/types';
-import { getWeightHistory, updateUserProfile } from '@/services/user-service';
+import { getWeightHistory, updateUserProfile, addWeightHistory } from '@/services/user-service';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MealCaptureDialog } from '@/components/task-dialog';
 import { addMealLog } from '@/services/task-service';
@@ -91,6 +91,9 @@ function AnalysisContent() {
     const [isGoalDialogOpen, setIsGoalDialogOpen] = useState(false);
     const [newGoalWeight, setNewGoalWeight] = useState<string>("");
 
+    const [isCurrentWeightDialogOpen, setIsCurrentWeightDialogOpen] = useState(false);
+    const [newCurrentWeight, setNewCurrentWeight] = useState<string>("");
+
     const units = userProfile?.units || 'imperial';
     const currentWeight = userProfile ? convertWeight(userProfile.currentWeight, units) : 0;
     const desiredWeight = userProfile ? convertWeight(userProfile.desiredWeight, units) : 0;
@@ -100,6 +103,12 @@ function AnalysisContent() {
             setNewGoalWeight(String(desiredWeight));
         }
     }, [isGoalDialogOpen, desiredWeight]);
+
+    useEffect(() => {
+        if (isCurrentWeightDialogOpen) {
+            setNewCurrentWeight(String(currentWeight));
+        }
+    }, [isCurrentWeightDialogOpen, currentWeight]);
 
     useEffect(() => {
         if (user) {
@@ -171,6 +180,31 @@ function AnalysisContent() {
             toast({ title: "Error", description: "Could not update your weight goal.", variant: "destructive" });
         }
     };
+
+    const handleUpdateCurrentWeight = async () => {
+        if (!user || !userProfile) return;
+        const newWeight = parseFloat(newCurrentWeight);
+        if (isNaN(newWeight) || newWeight <= 0) {
+            toast({ title: "Invalid Input", description: "Please enter a valid weight.", variant: "destructive" });
+            return;
+        }
+
+        let imperialWeight = newWeight;
+        if (units === 'metric') {
+            imperialWeight = newWeight / 0.453592;
+        }
+
+        try {
+            await updateUserProfile(user.uid, { currentWeight: imperialWeight });
+            await addWeightHistory(user.uid, imperialWeight);
+            await refetchUserProfile();
+            toast({ title: "Success", description: "Your current weight has been updated." });
+            setIsCurrentWeightDialogOpen(false);
+        } catch (error) {
+            console.error("Failed to update current weight:", error);
+            toast({ title: "Error", description: "Could not update your current weight.", variant: "destructive" });
+        }
+    };
     
     return (
         <div className="relative bg-background flex flex-col h-full max-h-screen sm:max-h-[90vh]">
@@ -232,8 +266,44 @@ function AnalysisContent() {
                             </Dialog>
                         </div>
                         <div>
-                            <p className="text-3xl font-bold">{currentWeight}<span className="text-base font-normal text-muted-foreground">{units === 'metric' ? 'kg' : 'lbs'}</span></p>
-                            <p className="text-sm text-muted-foreground">Current weight</p>
+                            <Dialog open={isCurrentWeightDialogOpen} onOpenChange={setIsCurrentWeightDialogOpen}>
+                                <DialogTrigger asChild>
+                                    <button className="flex flex-col items-center justify-center text-center p-2 rounded-lg hover:bg-white/5 transition-colors w-full">
+                                        <p className="text-3xl font-bold">{currentWeight}<span className="text-base font-normal text-muted-foreground">{units === 'metric' ? 'kg' : 'lbs'}</span></p>
+                                        <div className="flex items-center gap-1.5 mt-1">
+                                            <p className="text-sm text-muted-foreground">Current weight</p>
+                                            <Pencil className="h-3 w-3 text-muted-foreground" />
+                                        </div>
+                                    </button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Update Your Current Weight</DialogTitle>
+                                        <DialogDescription>
+                                            Enter your new weight. This will be added to your progress history.
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="grid gap-4 py-4">
+                                        <div className="grid grid-cols-4 items-center gap-4">
+                                            <Label htmlFor="newCurrentWeight" className="text-right">
+                                                Weight ({units === 'metric' ? 'kg' : 'lbs'})
+                                            </Label>
+                                            <Input
+                                                id="newCurrentWeight"
+                                                type="number"
+                                                step="0.1"
+                                                value={newCurrentWeight}
+                                                onChange={(e) => setNewCurrentWeight(e.target.value)}
+                                                className="col-span-3"
+                                            />
+                                        </div>
+                                    </div>
+                                    <DialogFooter>
+                                        <Button variant="outline" onClick={() => setIsCurrentWeightDialogOpen(false)}>Cancel</Button>
+                                        <Button onClick={handleUpdateCurrentWeight}>Save Changes</Button>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
                         </div>
                     </div>
                 </Card>
