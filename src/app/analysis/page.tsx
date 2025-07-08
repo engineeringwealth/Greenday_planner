@@ -104,6 +104,7 @@ function AnalysisContent() {
     const units = userProfile?.units || 'imperial';
     const currentWeight = userProfile ? convertWeight(userProfile.currentWeight, units) : 0;
     const desiredWeight = userProfile ? convertWeight(userProfile.desiredWeight, units) : 0;
+    const weightToGo = Math.round(Math.abs(currentWeight - desiredWeight) * 10) / 10;
 
     useEffect(() => {
         if (isGoalDialogOpen) {
@@ -319,7 +320,11 @@ function AnalysisContent() {
                     <CardHeader>
                         <div className="flex justify-between items-center">
                             <CardTitle>Goal progress</CardTitle>
-                            <span className="text-sm font-medium text-primary">{Math.round(progressPercentage)}% achieved</span>
+                            <span className="text-sm font-medium text-primary">
+                                {weightToGo > 0.1
+                                ? `${weightToGo} ${units === 'metric' ? 'kg' : 'lbs'} to go`
+                                : `Goal Achieved!`}
+                            </span>
                         </div>
                     </CardHeader>
                     <CardContent>
