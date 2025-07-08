@@ -179,18 +179,27 @@ function Step4About({ data, setData }) {
                 <div>
                     <h3 className="text-lg font-semibold mb-4 text-center">Date of Birth</h3>
                     <div className="grid grid-cols-3 gap-4">
-                        <Select value={selectedYear} onValueChange={(val) => handleDobChange('year', val)}>
-                            <SelectTrigger><SelectValue placeholder="Year" /></SelectTrigger>
-                            <SelectContent>{years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent>
-                        </Select>
-                         <Select value={selectedMonth} onValueChange={(val) => handleDobChange('month', val)}>
-                            <SelectTrigger><SelectValue placeholder="Month" /></SelectTrigger>
-                            <SelectContent>{months.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
-                        </Select>
-                         <Select value={selectedDay} onValueChange={(val) => handleDobChange('day', val)}>
-                            <SelectTrigger><SelectValue placeholder="Day" /></SelectTrigger>
-                            <SelectContent>{days.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
-                        </Select>
+                        <div className="space-y-2">
+                            <Label>Year</Label>
+                            <Select value={selectedYear} onValueChange={(val) => handleDobChange('year', val)}>
+                                <SelectTrigger><SelectValue placeholder="Year" /></SelectTrigger>
+                                <SelectContent>{years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Month</Label>
+                            <Select value={selectedMonth} onValueChange={(val) => handleDobChange('month', val)}>
+                                <SelectTrigger><SelectValue placeholder="Month" /></SelectTrigger>
+                                <SelectContent>{months.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Day</Label>
+                            <Select value={selectedDay} onValueChange={(val) => handleDobChange('day', val)}>
+                                <SelectTrigger><SelectValue placeholder="Day" /></SelectTrigger>
+                                <SelectContent>{days.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
+                            </Select>
+                        </div>
                     </div>
                 </div>
             </div>
