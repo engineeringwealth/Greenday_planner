@@ -16,6 +16,7 @@ import { Progress } from '@/components/ui/progress';
 import { Slider } from '@/components/ui/slider';
 import { calculateHealthMetrics } from '@/lib/health-utils';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
 
 const TOTAL_STEPS = 8;
 
@@ -44,7 +45,12 @@ function StepIndicator({ step }: { step: number }) {
 
 function OnboardingHeader() {
     return (
-        <h1 className="text-2xl font-bold text-primary">Myetician</h1>
+        <div className="w-full flex justify-between items-center">
+            <h1 className="text-2xl font-bold text-primary">Myetician</h1>
+            <Link href="/login" className="text-sm font-semibold text-primary hover:underline">
+                Sign In
+            </Link>
+        </div>
     );
 }
 
@@ -501,7 +507,7 @@ export default function OnboardingPage() {
     
     return (
         <main className="flex min-h-screen flex-col items-center justify-between bg-background p-4 sm:p-8">
-            <header className="w-full max-w-4xl flex flex-col items-center space-y-4">
+            <header className="w-full max-w-md flex flex-col items-center space-y-4">
                 <OnboardingHeader />
                 <StepIndicator step={step} />
             </header>

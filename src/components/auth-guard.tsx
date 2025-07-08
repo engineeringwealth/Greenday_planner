@@ -16,8 +16,9 @@ export function AuthGuard({ children }: { children: ReactNode }) {
 
     if (isAuthReady) {
       if (!user) {
-        // If not logged in, redirect to login page.
-        router.push('/login');
+        // If not logged in, redirect to onboarding page instead of login.
+        // This makes the questionnaire the entry point for new users.
+        router.push('/onboarding');
       } else if ((!userProfile || !userProfile.onboarded) && pathname !== '/onboarding') {
         // If logged in but not onboarded, redirect to onboarding.
         // Avoids a redirect loop if we are already on the onboarding page.
