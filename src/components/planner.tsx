@@ -14,6 +14,14 @@ import { MealCaptureDialog } from "@/components/task-dialog";
 import { DailyLog } from "@/components/task-list";
 import { format, eachDayOfInterval, startOfWeek, endOfWeek, isToday } from 'date-fns';
 import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 function CalorieGauge({ current, goal }: { current: number; goal: number }) {
   const percentage = goal > 0 ? Math.min((current / goal) * 100, 100) : 0;
@@ -167,10 +175,29 @@ export function CalorieTracker() {
           <span>{format(new Date(), 'MMMM')}</span>
           <ChevronDown className="w-4 h-4 text-muted-foreground" />
         </button>
-        <Avatar className="h-10 w-10 cursor-pointer" onClick={signOut}>
-          <AvatarImage src={user?.photoURL ?? ''} alt={user?.displayName ?? 'User'} />
-          <AvatarFallback>{(user?.displayName?.[0] || user?.email?.[0] || 'U').toUpperCase()}</AvatarFallback>
-        </Avatar>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Avatar className="h-10 w-10 cursor-pointer">
+              <AvatarImage src={user?.photoURL ?? ''} alt={user?.displayName ?? 'User'} />
+              <AvatarFallback>{(user?.displayName?.[0] || user?.email?.[0] || 'U').toUpperCase()}</AvatarFallback>
+            </Avatar>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+             <DropdownMenuLabel>
+                <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">{user?.displayName ?? 'User'}</p>
+                    <p className="text-xs leading-none text-muted-foreground">
+                        {user?.email}
+                    </p>
+                </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={signOut} className="cursor-pointer">
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>Sign Out</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </header>
 
       {/* Main Content */}
