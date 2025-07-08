@@ -29,17 +29,33 @@ function ProfilePageContent() {
 
     useEffect(() => {
         if (userProfile) {
+            // Use default values for any fields that might be missing from the user profile
+            // This prevents calculations from resulting in NaN
+            const safeUserProfile = {
+                goal: userProfile.goal ?? 'lose',
+                name: userProfile.name ?? '',
+                activityLevel: userProfile.activityLevel ?? 'lightly',
+                gender: userProfile.gender ?? 'male',
+                dob: userProfile.dob ?? '',
+                units: userProfile.units ?? 'metric',
+                height: userProfile.height ?? 67, // default inches
+                currentWeight: userProfile.currentWeight ?? 154, // default lbs
+                goalWeight: userProfile.goalWeight ?? 143, // default lbs
+                intensity: userProfile.intensity ?? 20,
+            };
+
             setFormData({
-                goal: userProfile.goal,
-                name: userProfile.name || '',
-                activityLevel: userProfile.activityLevel,
-                gender: userProfile.gender,
-                dob: userProfile.dob,
-                units: userProfile.units,
-                height: userProfile.units === 'metric' ? userProfile.height * 2.54 : userProfile.height,
-                currentWeight: userProfile.units === 'metric' ? userProfile.currentWeight * 0.453592 : userProfile.currentWeight,
-                goalWeight: userProfile.units === 'metric' ? userProfile.goalWeight * 0.453592 : userProfile.goalWeight,
-                intensity: userProfile.intensity,
+                goal: safeUserProfile.goal as any,
+                name: safeUserProfile.name,
+                activityLevel: safeUserProfile.activityLevel as any,
+                gender: safeUserProfile.gender as any,
+                dob: safeUserProfile.dob,
+                units: safeUserProfile.units as any,
+                // Convert to display units
+                height: safeUserProfile.units === 'metric' ? safeUserProfile.height * 2.54 : safeUserProfile.height,
+                currentWeight: safeUserProfile.units === 'metric' ? safeUserProfile.currentWeight * 0.453592 : safeUserProfile.currentWeight,
+                goalWeight: safeUserProfile.units === 'metric' ? safeUserProfile.goalWeight * 0.453592 : safeUserProfile.goalWeight,
+                intensity: safeUserProfile.intensity,
             });
         }
     }, [userProfile]);
@@ -232,19 +248,19 @@ function ProfilePageContent() {
                         </CardHeader>
                         <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                             <div>
-                                <p className="text-2xl font-bold text-primary">{healthMetrics?.dailyCalorieGoal}</p>
+                                <p className="text-2xl font-bold text-primary">{Math.round(healthMetrics?.dailyCalorieGoal || 0)}</p>
                                 <p className="text-sm text-muted-foreground">Calories</p>
                             </div>
                              <div>
-                                <p className="text-2xl font-bold">{healthMetrics?.dailyProteinGoal}g</p>
+                                <p className="text-2xl font-bold">{Math.round(healthMetrics?.dailyProteinGoal || 0)}g</p>
                                 <p className="text-sm text-muted-foreground">Protein</p>
                             </div>
                              <div>
-                                <p className="text-2xl font-bold">{healthMetrics?.dailyCarbsGoal}g</p>
+                                <p className="text-2xl font-bold">{Math.round(healthMetrics?.dailyCarbsGoal || 0)}g</p>
                                 <p className="text-sm text-muted-foreground">Carbs</p>
                             </div>
                              <div>
-                                <p className="text-2xl font-bold">{healthMetrics?.dailyFatGoal}g</p>
+                                <p className="text-2xl font-bold">{Math.round(healthMetrics?.dailyFatGoal || 0)}g</p>
                                 <p className="text-sm text-muted-foreground">Fat</p>
                             </div>
                         </CardContent>
