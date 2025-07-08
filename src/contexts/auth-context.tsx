@@ -180,7 +180,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!auth) return;
     try {
       await firebaseSignOut(auth);
-      router.push('/login');
+      router.push('/onboarding');
     } catch (error) {
       handleAuthError(error as AuthError);
     }
