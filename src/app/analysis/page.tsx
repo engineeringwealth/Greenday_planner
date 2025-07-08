@@ -9,8 +9,8 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft, Flame, BarChart, Home, Camera, AreaChart, Pencil } from 'lucide-react';
 import { format } from 'date-fns';
-import { Bar, BarChart as RechartsBarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, ReferenceLine } from 'recharts';
-import { ChartTooltipContent } from '@/components/ui/chart';
+import { Bar, BarChart as RechartsBarChart, XAxis, YAxis, Tooltip, ReferenceLine } from 'recharts';
+import { ChartContainer, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import type { UserProfile, WeightHistoryEntry } from '@/lib/types';
 import { getWeightHistory, updateUserProfile, addWeightHistory } from '@/services/user-service';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -51,8 +51,15 @@ function ProgressChart({ history, units, goalWeight }: { history: WeightHistoryE
     const domainMin = allWeights.length > 0 ? Math.min(...allWeights) - 2 : 50;
     const domainMax = allWeights.length > 0 ? Math.max(...allWeights) + 2 : 100;
 
+    const chartConfig = {
+      weight: {
+        label: `Weight (${units === 'metric' ? 'kg' : 'lbs'})`,
+        color: "hsl(var(--primary))",
+      },
+    } satisfies ChartConfig;
+
     return (
-        <ResponsiveContainer width="100%" height={250}>
+        <ChartContainer config={chartConfig} className="h-[250px] w-full">
             <RechartsBarChart data={chartData} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
                 <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} domain={[domainMin, domainMax]} />
@@ -75,9 +82,9 @@ function ProgressChart({ history, units, goalWeight }: { history: WeightHistoryE
                 >
                     <ReferenceLine.Label value="Goal" position="top" fill="hsl(var(--destructive))" fontSize={12} />
                 </ReferenceLine>
-                <Bar dataKey="weight" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="weight" fill="var(--color-weight)" radius={[4, 4, 0, 0]} />
             </RechartsBarChart>
-        </ResponsiveContainer>
+        </ChartContainer>
     );
 }
 
