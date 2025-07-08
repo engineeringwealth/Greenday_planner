@@ -71,6 +71,12 @@ export function MealCaptureDialog({ isOpen, setIsOpen, onSubmit }: MealCaptureDi
     setIsOpen(false);
   }
 
+  const handleRetake = () => {
+    setPhotoDataUri(null);
+    setAnalysisResult(null);
+    setError(null);
+  };
+
   const capturePhoto = () => {
     if (!videoRef.current || !canvasRef.current) return;
     const video = videoRef.current;
@@ -136,14 +142,15 @@ export function MealCaptureDialog({ isOpen, setIsOpen, onSubmit }: MealCaptureDi
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose()}}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-md grid grid-rows-[auto_minmax(0,1fr)_auto] max-h-[90vh] p-0">
+        <DialogHeader className="p-6 pb-2">
           <DialogTitle>Log a Meal</DialogTitle>
           <DialogDescription>
             Capture a photo of your meal for AI analysis or upload an image.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4">
+
+        <div className="overflow-y-auto px-6 space-y-4">
           {error && <Alert variant="destructive"><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
           
           {!photoDataUri && (
@@ -187,7 +194,7 @@ export function MealCaptureDialog({ isOpen, setIsOpen, onSubmit }: MealCaptureDi
                                 <span className="text-right">{item.calories} kcal</span>
                             </div>
                         ))}
-                        <hr />
+                        <hr className="my-2 border-border" />
                         <div className="grid grid-cols-2 gap-2 font-bold">
                            <span>Total Calories</span>
                            <span className="text-right">{analysisResult.foodItems.reduce((acc, i) => acc + i.calories, 0)} kcal</span>
@@ -196,12 +203,12 @@ export function MealCaptureDialog({ isOpen, setIsOpen, onSubmit }: MealCaptureDi
                 </Card>
             </div>
           )}
-
         </div>
-        <DialogFooter>
+
+        <DialogFooter className="p-6 pt-4 border-t">
           <Button type="button" variant="ghost" onClick={handleClose}>Cancel</Button>
+          {photoDataUri && <Button type="button" variant="outline" onClick={handleRetake}>Retake</Button>}
           {analysisResult && <Button onClick={handleLogMeal} style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}>Log Meal</Button>}
-          {photoDataUri && <Button type="button" variant="outline" onClick={() => setPhotoDataUri(null)}>Retake</Button>}
         </DialogFooter>
       </DialogContent>
     </Dialog>
