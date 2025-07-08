@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Mail, ArrowLeft, CheckCircle2, ChevronRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -538,8 +539,3 @@ export default function OnboardingPage() {
         </main>
     );
 }
-
-// Minimal Label component for internal use
-const Label = ({ children, ...props }) => (
-    <label {...props}>{children}</label>
-);
