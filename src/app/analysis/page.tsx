@@ -7,17 +7,28 @@ import { AuthGuard } from '@/components/auth-guard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft, Flame, TrendingUp, BarChart, Settings, Home, Camera, AreaChart } from 'lucide-react';
-import { format, subDays } from 'date-fns';
+import { ArrowLeft, Flame, BarChart, Home, Camera, AreaChart, Pencil } from 'lucide-react';
+import { format } from 'date-fns';
 import { Bar, BarChart as RechartsBarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, ReferenceLine } from 'recharts';
-import { ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { ChartTooltipContent } from '@/components/ui/chart';
 import type { UserProfile, WeightHistoryEntry } from '@/lib/types';
-import { getWeightHistory } from '@/services/user-service';
+import { getWeightHistory, updateUserProfile } from '@/services/user-service';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MealCaptureDialog } from '@/components/task-dialog';
 import { addMealLog } from '@/services/task-service';
 import { useToast } from '@/hooks/use-toast';
 import type { MealLog } from '@/lib/types';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 function convertWeight(weight: number, units: UserProfile['units']) {
     if (units === 'metric') {
@@ -71,15 +82,24 @@ function ProgressChart({ history, units, goalWeight }: { history: WeightHistoryE
 }
 
 function AnalysisContent() {
-    const { user, userProfile } = useAuth();
+    const { user, userProfile, refetchUserProfile } = useAuth();
     const { toast } = useToast();
     const [weightHistory, setWeightHistory] = useState<WeightHistoryEntry[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+    
+    const [isGoalDialogOpen, setIsGoalDialogOpen] = useState(false);
+    const [newGoalWeight, setNewGoalWeight] = useState<string>("");
 
     const units = userProfile?.units || 'imperial';
     const currentWeight = userProfile ? convertWeight(userProfile.currentWeight, units) : 0;
     const desiredWeight = userProfile ? convertWeight(userProfile.desiredWeight, units) : 0;
+
+    useEffect(() => {
+        if (isGoalDialogOpen) {
+            setNewGoalWeight(String(desiredWeight));
+        }
+    }, [isGoalDialogOpen, desiredWeight]);
 
     useEffect(() => {
         if (user) {
@@ -128,6 +148,30 @@ function AnalysisContent() {
         }
     };
     
+    const handleUpdateGoal = async () => {
+        if (!user || !userProfile) return;
+        const newWeight = parseFloat(newGoalWeight);
+        if (isNaN(newWeight) || newWeight <= 0) {
+            toast({ title: "Invalid Input", description: "Please enter a valid weight.", variant: "destructive" });
+            return;
+        }
+
+        let imperialWeight = newWeight;
+        if (units === 'metric') {
+            imperialWeight = newWeight / 0.453592;
+        }
+
+        try {
+            await updateUserProfile(user.uid, { desiredWeight: imperialWeight });
+            await refetchUserProfile();
+            toast({ title: "Success", description: "Your weight goal has been updated." });
+            setIsGoalDialogOpen(false);
+        } catch (error) {
+            console.error("Failed to update weight goal:", error);
+            toast({ title: "Error", description: "Could not update your weight goal.", variant: "destructive" });
+        }
+    };
+    
     return (
         <div className="relative bg-background flex flex-col h-full max-h-screen sm:max-h-[90vh]">
             <header className="flex items-center justify-between p-4 flex-shrink-0">
@@ -148,8 +192,44 @@ function AnalysisContent() {
                     </CardTitle>
                     <div className="grid grid-cols-2 gap-4 mt-4 text-foreground">
                         <div>
-                            <p className="text-3xl font-bold">{desiredWeight}<span className="text-base font-normal text-muted-foreground">{units === 'metric' ? 'kg' : 'lbs'}</span></p>
-                            <p className="text-sm text-muted-foreground">Weight goal</p>
+                            <Dialog open={isGoalDialogOpen} onOpenChange={setIsGoalDialogOpen}>
+                                <DialogTrigger asChild>
+                                    <button className="flex flex-col items-center justify-center text-center p-2 rounded-lg hover:bg-white/5 transition-colors w-full">
+                                        <p className="text-3xl font-bold">{desiredWeight}<span className="text-base font-normal text-muted-foreground">{units === 'metric' ? 'kg' : 'lbs'}</span></p>
+                                        <div className="flex items-center gap-1.5 mt-1">
+                                            <p className="text-sm text-muted-foreground">Weight goal</p>
+                                            <Pencil className="h-3 w-3 text-muted-foreground" />
+                                        </div>
+                                    </button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Update Your Weight Goal</DialogTitle>
+                                        <DialogDescription>
+                                            Enter your new desired weight. This will update the goal across the app.
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="grid gap-4 py-4">
+                                        <div className="grid grid-cols-4 items-center gap-4">
+                                            <Label htmlFor="newGoalWeight" className="text-right">
+                                                Weight ({units === 'metric' ? 'kg' : 'lbs'})
+                                            </Label>
+                                            <Input
+                                                id="newGoalWeight"
+                                                type="number"
+                                                step="0.1"
+                                                value={newGoalWeight}
+                                                onChange={(e) => setNewGoalWeight(e.target.value)}
+                                                className="col-span-3"
+                                            />
+                                        </div>
+                                    </div>
+                                    <DialogFooter>
+                                        <Button variant="outline" onClick={() => setIsGoalDialogOpen(false)}>Cancel</Button>
+                                        <Button onClick={handleUpdateGoal}>Save Changes</Button>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
                         </div>
                         <div>
                             <p className="text-3xl font-bold">{currentWeight}<span className="text-base font-normal text-muted-foreground">{units === 'metric' ? 'kg' : 'lbs'}</span></p>
