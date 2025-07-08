@@ -5,6 +5,7 @@ import { useState, useRef, useEffect } from "react";
 import { Camera, Loader2, Upload, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { analyzeMeal, type AnalyzeMealOutput } from "@/ai/flows/analyze-meal-flow";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
