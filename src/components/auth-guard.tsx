@@ -16,18 +16,21 @@ export function AuthGuard({ children }: { children: ReactNode }) {
 
     if (isAuthReady) {
       if (!user) {
-        // If not logged in, redirect to onboarding page instead of login.
+        // If not logged in, redirect to the onboarding page.
         // This makes the questionnaire the entry point for new users.
-        router.push('/onboarding');
+        if (pathname !== '/onboarding') {
+          router.push('/onboarding');
+        }
       } else if ((!userProfile || !userProfile.onboarded) && pathname !== '/onboarding') {
-        // If logged in but not onboarded, redirect to onboarding.
-        // Avoids a redirect loop if we are already on the onboarding page.
+        // If logged in but not onboarded, also redirect to onboarding.
+        // This avoids a redirect loop if we are already on the onboarding page.
         router.push('/onboarding');
       }
     }
   }, [user, userProfile, loading, profileLoading, router, pathname]);
 
-  // Determine if we should show loading skeleton or content
+  // Determine if we should show a loading skeleton or the actual content.
+  // We show a skeleton while auth is loading, or if the user is about to be redirected.
   const showLoadingSkeleton = loading || profileLoading || !user || (!userProfile?.onboarded && pathname !== '/onboarding');
 
   if (showLoadingSkeleton) {
