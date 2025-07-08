@@ -41,7 +41,7 @@ function CalorieGauge({ consumed, goal }: { consumed: number; goal: number }) {
             <div className="relative h-48 w-48">
               <svg className="h-full w-full" viewBox="0 0 200 200">
                 <circle className="text-muted/20" strokeWidth="16" stroke="currentColor" fill="transparent" r="90" cx="100" cy="100" />
-                <circle className="text-primary" strokeWidth="16" stroke="currentColor" fill="transparent" r="90" cx="100" cy="100" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} style={{ transition: 'stroke-dashoffset 0.5s ease-in-out' }} transform="rotate(-90 100 100)" />
+                <circle className="text-chart-5" strokeWidth="16" stroke="currentColor" fill="transparent" r="90" cx="100" cy="100" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} style={{ transition: 'stroke-dashoffset 0.5s ease-in-out' }} transform="rotate(-90 100 100)" />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span className="text-6xl font-bold text-foreground tracking-tighter">{Math.round(consumed)}</span>
@@ -59,24 +59,24 @@ function CalorieGauge({ consumed, goal }: { consumed: number; goal: number }) {
 
 function MacroGauge({ title, value, goal, icon: Icon, colorClass, unit = 'g' }: { title: string, value: number, goal: number, icon: React.ElementType, colorClass: string, unit?: string }) {
   const percentage = goal > 0 ? Math.min((value / goal) * 100, 100) : 0;
-  const circumference = 2 * Math.PI * 30; // smaller radius
+  const circumference = 2 * Math.PI * 25;
   const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
   return (
-    <Card className="p-4 rounded-3xl border-0 bg-card/80 flex flex-col justify-between h-full">
+    <Card className="p-3 rounded-3xl border-0 bg-card/80 flex flex-col justify-between h-full">
       <div>
         <div className="flex justify-between items-center mb-2">
           <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
           <Icon className="w-4 h-4 text-muted-foreground" />
         </div>
         <div className="flex flex-col items-center">
-          <div className="relative h-24 w-24">
-            <svg className="h-full w-full" viewBox="0 0 70 70">
-              <circle className="text-muted/20" strokeWidth="6" stroke="currentColor" fill="transparent" r="30" cx="35" cy="35" />
-              <circle className={colorClass} strokeWidth="6" stroke="currentColor" fill="transparent" r="30" cx="35" cy="35" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} style={{ transition: 'stroke-dashoffset 0.5s ease-in-out' }} transform="rotate(-90 35 35)" />
+          <div className="relative h-20 w-20">
+            <svg className="h-full w-full" viewBox="0 0 60 60">
+              <circle className="text-muted/20" strokeWidth="5" stroke="currentColor" fill="transparent" r="25" cx="30" cy="30" />
+              <circle className={colorClass} strokeWidth="5" stroke="currentColor" fill="transparent" r="25" cx="30" cy="30" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} style={{ transition: 'stroke-dashoffset 0.5s ease-in-out' }} transform="rotate(-90 30 30)" />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-xl font-bold text-foreground">{Math.round(value)}<span className="text-sm">{unit}</span></span>
+              <span className="text-lg font-bold text-foreground">{Math.round(value)}<span className="text-sm">{unit}</span></span>
               <span className="text-xs text-muted-foreground">Consumed</span>
             </div>
           </div>
@@ -220,7 +220,7 @@ export function CalorieTracker() {
           <div className="lg:col-span-2">
             <CalorieGauge consumed={totals.calories} goal={dailyGoal} />
           </div>
-          <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
             <MacroGauge title="Protein" value={totals.protein} goal={proteinGoal} icon={BrainCircuit} colorClass="text-chart-1" />
             <MacroGauge title="Carbs" value={totals.carbs} goal={carbsGoal} icon={Wheat} colorClass="text-chart-4" />
             <MacroGauge title="Fat" value={totals.fat} goal={fatGoal} icon={Container} colorClass="text-chart-2" />
