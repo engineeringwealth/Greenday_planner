@@ -29,7 +29,7 @@ function convertWeight(weight: number, units: UserProfile['units']) {
 function ProgressChart({ history, units, goalWeight }: { history: WeightHistoryEntry[], units: UserProfile['units'], goalWeight: number }) {
     const chartData = useMemo(() => {
         return history.map(entry => ({
-            date: format(entry.date, 'MMM d'),
+            date: format(entry.date, 'MMM'),
             weight: convertWeight(entry.weight, units),
         }));
     }, [history, units]);
@@ -81,9 +81,6 @@ function AnalysisContent() {
     const currentWeight = userProfile ? convertWeight(userProfile.currentWeight, units) : 0;
     const desiredWeight = userProfile ? convertWeight(userProfile.desiredWeight, units) : 0;
 
-    const weightDifference = Math.abs(currentWeight - desiredWeight);
-    const progressPercentage = desiredWeight > 0 ? Math.max(0, 100 - (weightDifference / (userProfile ? convertWeight(userProfile.currentWeight, units) : 1)) * 100) : 0;
-
     useEffect(() => {
         if (user) {
             setIsLoading(true);
@@ -98,6 +95,27 @@ function AnalysisContent() {
             return () => unsubscribe();
         }
     }, [user, toast]);
+
+    const progressPercentage = useMemo(() => {
+        if (!userProfile || weightHistory.length === 0) return 0;
+
+        const startWeight = convertWeight(weightHistory[0].weight, userProfile.units);
+        const current = convertWeight(userProfile.currentWeight, userProfile.units);
+        const goal = convertWeight(userProfile.desiredWeight, userProfile.units);
+
+        if (startWeight === goal) {
+            return current === goal ? 100 : 0;
+        }
+
+        const totalToChange = startWeight - goal;
+        const changedSoFar = startWeight - current;
+
+        if (totalToChange === 0) return 100;
+
+        const percentage = (changedSoFar / totalToChange) * 100;
+
+        return Math.max(0, Math.min(100, percentage));
+    }, [userProfile, weightHistory]);
 
     const handleAddMealLog = async (mealData: Omit<MealLog, "id" | "createdAt">) => {
         if (!user) return;
@@ -126,7 +144,7 @@ function AnalysisContent() {
                 <Card className="bg-card/80 rounded-2xl p-6 text-center">
                     <CardTitle className="flex items-center justify-center gap-2 font-semibold">
                         <Flame className="text-primary" />
-                        Goal Progress
+                        {Math.round(progressPercentage) >= 100 ? "Goal Achieved!" : "Goal Progress"}
                     </CardTitle>
                     <div className="grid grid-cols-2 gap-4 mt-4 text-foreground">
                         <div>
@@ -143,7 +161,7 @@ function AnalysisContent() {
                 <Card className="bg-card/80 rounded-2xl">
                     <CardHeader>
                         <div className="flex justify-between items-center">
-                            <CardTitle>Progress Chart</CardTitle>
+                            <CardTitle>Goal progress</CardTitle>
                             <span className="text-sm font-medium text-primary">{Math.round(progressPercentage)}% achieved</span>
                         </div>
                     </CardHeader>
