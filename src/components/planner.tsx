@@ -70,7 +70,7 @@ function MacroGauge({ title, value, goal, icon: Icon, colorClass, unit = 'g' }: 
           <Icon className="w-4 h-4 text-muted-foreground" />
         </div>
         <div className="flex flex-col items-center">
-          <div className="relative h-20 w-20">
+          <div className="relative h-16 w-16">
             <svg className="h-full w-full" viewBox="0 0 60 60">
               <circle className="text-muted/20" strokeWidth="5" stroke="currentColor" fill="transparent" r="25" cx="30" cy="30" />
               <circle className={colorClass} strokeWidth="5" stroke="currentColor" fill="transparent" r="25" cx="30" cy="30" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} style={{ transition: 'stroke-dashoffset 0.5s ease-in-out' }} transform="rotate(-90 30 30)" />
