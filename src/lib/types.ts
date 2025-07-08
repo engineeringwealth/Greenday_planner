@@ -21,6 +21,8 @@ export interface MealLog {
 export interface UserProfile {
   uid: string;
   onboarded: boolean;
+  name?: string;
+  height?: number; // in inches
   currentWeight: number;
   desiredWeight: number;
   goalTimeline: number; // in weeks

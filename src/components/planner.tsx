@@ -2,7 +2,8 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { LogOut, CalendarIcon, ChevronDown, Home, LineChart, Camera, Zap, Flame, Droplets } from "lucide-react";
+import { useRouter } from 'next/navigation';
+import { LogOut, CalendarIcon, ChevronDown, Home, LineChart, Camera, Zap, Flame, Droplets, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -22,6 +23,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import Link from "next/link";
 
 function CalorieGauge({ current, goal }: { current: number; goal: number }) {
   const percentage = goal > 0 ? Math.min((current / goal) * 100, 100) : 0;
@@ -108,6 +110,7 @@ function MacroCard({ title, value, icon: Icon, colorClass }: { title: string, va
 
 export function CalorieTracker() {
   const { user, signOut, userProfile } = useAuth();
+  const router = useRouter();
   const { toast } = useToast();
   const [mealLogs, setMealLogs] = useState<MealLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -178,20 +181,24 @@ export function CalorieTracker() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Avatar className="h-10 w-10 cursor-pointer">
-              <AvatarImage src={user?.photoURL ?? ''} alt={user?.displayName ?? 'User'} />
-              <AvatarFallback>{(user?.displayName?.[0] || user?.email?.[0] || 'U').toUpperCase()}</AvatarFallback>
+              <AvatarImage src={user?.photoURL ?? ''} alt={userProfile?.name ?? 'User'} />
+              <AvatarFallback>{(userProfile?.name?.[0] || user?.email?.[0] || 'U').toUpperCase()}</AvatarFallback>
             </Avatar>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
              <DropdownMenuLabel>
                 <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{user?.displayName ?? 'User'}</p>
+                    <p className="text-sm font-medium leading-none">{userProfile?.name ?? user?.displayName ?? 'User'}</p>
                     <p className="text-xs leading-none text-muted-foreground">
                         {user?.email}
                     </p>
                 </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => router.push('/profile')} className="cursor-pointer">
+              <User className="mr-2 h-4 w-4" />
+              <span>Profile</span>
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={signOut} className="cursor-pointer">
               <LogOut className="mr-2 h-4 w-4" />
               <span>Sign Out</span>

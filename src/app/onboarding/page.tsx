@@ -17,6 +17,8 @@ import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const onboardingSchema = z.object({
+  name: z.string().min(1, 'Name is required.'),
+  height: z.coerce.number().min(1, 'Height is required (in inches).'),
   currentWeight: z.coerce.number().min(1, 'Current weight is required.'),
   desiredWeight: z.coerce.number().min(1, 'Desired weight is required.'),
   goalTimeline: z.coerce.number().min(1, 'Please select a timeline.'),
@@ -56,6 +58,8 @@ export default function OnboardingPage() {
   const form = useForm<z.infer<typeof onboardingSchema>>({
     resolver: zodResolver(onboardingSchema),
     defaultValues: {
+      name: user?.displayName ?? '',
+      height: undefined,
       currentWeight: undefined,
       desiredWeight: undefined,
       goalTimeline: undefined,
@@ -77,6 +81,8 @@ export default function OnboardingPage() {
       const dailyCalorieGoal = calculateDailyCalorieGoal(values.currentWeight, values.desiredWeight, values.goalTimeline);
       
       await updateUserProfile(user.uid, {
+        name: values.name,
+        height: values.height,
         currentWeight: values.currentWeight,
         desiredWeight: values.desiredWeight,
         goalTimeline: values.goalTimeline,
@@ -130,30 +136,58 @@ export default function OnboardingPage() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormField
                 control={form.control}
-                name="currentWeight"
+                name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Current Weight (lbs)</FormLabel>
+                    <FormLabel>Name</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="150" {...field} onChange={e => field.onChange(parseFloat(e.target.value))}/>
+                      <Input placeholder="Jane Doe" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <FormField
+               <FormField
                 control={form.control}
-                name="desiredWeight"
+                name="height"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Desired Weight (lbs)</FormLabel>
+                    <FormLabel>Height (in)</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="140" {...field} onChange={e => field.onChange(parseFloat(e.target.value))}/>
+                      <Input type="number" placeholder="65" {...field} onChange={e => field.onChange(parseFloat(e.target.value))}/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="currentWeight"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Current Weight (lbs)</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="150" {...field} onChange={e => field.onChange(parseFloat(e.target.value))}/>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="desiredWeight"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Desired Weight (lbs)</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="140" {...field} onChange={e => field.onChange(parseFloat(e.target.value))}/>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
               <FormField
                 control={form.control}
                 name="goalTimeline"
