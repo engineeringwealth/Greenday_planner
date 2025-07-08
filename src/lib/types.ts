@@ -1,4 +1,5 @@
 
+
 export interface FoodItem {
   name: string;
   calories: number;
@@ -15,16 +16,17 @@ export interface MealLog {
   totalProtein: number;
   totalCarbs: number;
   totalFat: number;
-  photoUrl: string; // For this version, we store the dataURI. In a real app, upload to storage and get a URL
+  photoUrl: string; // In a real app, upload this to storage and get a URL
 }
 
 export interface UserProfile {
   uid: string;
   onboarded: boolean;
   name?: string;
-  height?: number; // in inches
-  currentWeight: number;
-  desiredWeight: number;
+  units: 'imperial' | 'metric';
+  height?: number; // stored in inches
+  currentWeight: number; // stored in lbs
+  desiredWeight: number; // stored in lbs
   goalTimeline: number; // in weeks
   dailyCalorieGoal: number;
 }
