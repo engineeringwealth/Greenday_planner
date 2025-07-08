@@ -133,9 +133,9 @@ export default function LoginPage() {
               </Button>
 
               <div className="mt-6 text-center text-sm">
-                Don&apos;t have an account?{' '}
+                New to Myetician?{' '}
                 <Link href="/onboarding" className="font-semibold text-primary hover:underline">
-                  Sign up
+                  Start the questionnaire
                 </Link>
               </div>
             </>

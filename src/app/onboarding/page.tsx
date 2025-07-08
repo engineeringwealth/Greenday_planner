@@ -47,9 +47,12 @@ function OnboardingHeader() {
     return (
         <div className="w-full flex justify-between items-center">
             <h1 className="text-2xl font-bold text-primary">Myetician</h1>
-            <Link href="/login" className="text-sm font-semibold text-primary hover:underline">
-                Sign In
-            </Link>
+             <p className="text-sm text-muted-foreground">
+                Already have an account?{' '}
+                <Link href="/login" className="font-semibold text-primary hover:underline">
+                    Sign In
+                </Link>
+            </p>
         </div>
     );
 }
