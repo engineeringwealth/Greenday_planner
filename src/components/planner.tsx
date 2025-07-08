@@ -2,56 +2,100 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Plus, LogOut, Camera } from "lucide-react";
+import { LogOut, CalendarIcon, ChevronDown, Home, LineChart, Camera, Sparkles, Zap, Flame, Droplets } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import type { MealLog } from "@/lib/types";
 import { useAuth } from "@/contexts/auth-context";
 import * as mealLogService from "@/services/task-service";
 import { useToast } from "@/hooks/use-toast";
 import { MealCaptureDialog } from "@/components/task-dialog";
 import { DailyLog } from "@/components/task-list";
+import { format, eachDayOfInterval, startOfWeek, endOfWeek, isToday } from 'date-fns';
+import { cn } from "@/lib/utils";
 
-function CalorieProgress({ current, goal }: { current: number; goal: number }) {
+function CalorieGauge({ current, goal }: { current: number; goal: number }) {
   const percentage = goal > 0 ? Math.min((current / goal) * 100, 100) : 0;
-  const circumference = 2 * Math.PI * 52; 
+  const circumference = 2 * Math.PI * 90;
   const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
   return (
-    <div className="relative h-40 w-40">
-      <svg className="h-full w-full" viewBox="0 0 120 120">
+    <div className="relative h-64 w-64">
+      <svg className="h-full w-full" viewBox="0 0 200 200">
+        <defs>
+          <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style={{ stopColor: "hsl(var(--primary))", stopOpacity: 0.8 }} />
+            <stop offset="100%" style={{ stopColor: "hsl(var(--accent))", stopOpacity: 1 }} />
+          </linearGradient>
+        </defs>
         <circle
-          className="text-muted/20"
-          strokeWidth="8"
+          className="text-card"
+          strokeWidth="16"
           stroke="currentColor"
           fill="transparent"
-          r="52"
-          cx="60"
-          cy="60"
+          r="90"
+          cx="100"
+          cy="100"
         />
         <circle
-          className="text-primary"
-          strokeWidth="8"
-          stroke="currentColor"
+          stroke="url(#gaugeGradient)"
+          strokeWidth="16"
           fill="transparent"
-          r="52"
-          cx="60"
-          cy="60"
+          r="90"
+          cx="100"
+          cy="100"
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={strokeDashoffset}
           style={{ transition: 'stroke-dashoffset 0.5s ease-in-out' }}
-          transform="rotate(-90 60 60)"
+          transform="rotate(-90 100 100)"
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-3xl font-bold text-foreground">{Math.round(current)}</span>
-        <span className="text-sm text-muted-foreground">/ {goal} kcal</span>
+        <span className="text-6xl font-bold text-foreground tracking-tighter">{Math.round(current)}</span>
+        <span className="text-lg text-muted-foreground font-medium">Calories left</span>
       </div>
     </div>
   );
+}
+
+function WeekCalendar() {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const week = eachDayOfInterval({
+    start: startOfWeek(currentDate, { weekStartsOn: 1 }), // Monday
+    end: endOfWeek(currentDate, { weekStartsOn: 1 }),
+  });
+
+  return (
+    <div className="flex justify-between items-center px-4">
+      {week.map(day => (
+        <div key={day.toString()} className="text-center">
+          <p className="text-xs text-muted-foreground">{format(day, 'E')}</p>
+          <button className={cn(
+            "mt-2 w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-colors",
+            isToday(day) ? "bg-accent text-accent-foreground" : "hover:bg-card"
+          )}>
+            {format(day, 'd')}
+          </button>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function MacroCard({ title, value, icon: Icon, colorClass }: { title: string, value: number, icon: React.ElementType, colorClass: string }) {
+  return (
+    <Card className={cn("p-4 flex-1 rounded-3xl border-0", colorClass)}>
+      <div className="flex justify-between items-center">
+        <Icon className="w-5 h-5 text-foreground/80" />
+      </div>
+      <div className="mt-4">
+        <p className="text-2xl font-bold tracking-tight text-foreground">{value}<span className="text-base font-medium text-foreground/80">g</span></p>
+        <p className="text-sm font-medium text-foreground/80">{title}</p>
+      </div>
+    </Card>
+  )
 }
 
 export function CalorieTracker() {
@@ -61,7 +105,6 @@ export function CalorieTracker() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  // Hardcoded daily calorie goal for now
   const dailyGoal = 2000;
 
   useEffect(() => {
@@ -72,18 +115,13 @@ export function CalorieTracker() {
         setIsLoading(false);
       }, (error) => {
         console.error("Failed to fetch meal logs:", error);
-        toast({
-            title: "Error",
-            description: "Could not fetch your meal logs.",
-            variant: "destructive"
-        });
+        toast({ title: "Error", description: "Could not fetch your meal logs.", variant: "destructive" });
         setIsLoading(false);
       });
-
       return () => unsubscribe();
     } else {
-        setMealLogs([]);
-        setIsLoading(false);
+      setMealLogs([]);
+      setIsLoading(false);
     }
   }, [user, toast]);
 
@@ -91,100 +129,91 @@ export function CalorieTracker() {
     if (!user) return;
     try {
       await mealLogService.addMealLog(user.uid, mealData);
-       toast({ title: "Success", description: "Meal logged successfully!" });
+      toast({ title: "Success", description: "Meal logged successfully!" });
     } catch (error) {
       console.error("Failed to add meal log:", error);
       toast({ title: "Error", description: "Failed to log new meal.", variant: "destructive" });
     }
   };
-  
+
   const handleDeleteMealLog = async (logId: string) => {
     if (!user) return;
     try {
-        await mealLogService.deleteMealLog(user.uid, logId);
+      await mealLogService.deleteMealLog(user.uid, logId);
     } catch (error) {
-        console.error("Failed to delete meal log:", error);
-        toast({ title: "Error", description: "Failed to delete meal log.", variant: "destructive" });
+      console.error("Failed to delete meal log:", error);
+      toast({ title: "Error", description: "Failed to delete meal log.", variant: "destructive" });
     }
   };
 
-  const totalCaloriesToday = useMemo(() => {
-    return mealLogs.reduce((sum, log) => sum + log.totalCalories, 0);
+  const totals = useMemo(() => {
+    return mealLogs.reduce((acc, log) => {
+      acc.calories += log.totalCalories;
+      acc.protein += log.totalProtein;
+      acc.carbs += log.totalCarbs;
+      acc.fat += log.totalFat;
+      return acc;
+    }, { calories: 0, protein: 0, carbs: 0, fat: 0 });
   }, [mealLogs]);
 
+  const caloriesLeft = dailyGoal - totals.calories;
 
   return (
-    <div className="container mx-auto p-4 sm:p-6 lg:p-8">
-      <header className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl sm:text-4xl font-bold text-foreground font-headline">
-            SnapCalTracker
-          </h1>
-          <p className="text-muted-foreground mt-1">Your AI-powered daily calorie tracker.</p>
-        </div>
-        <div className="flex items-center gap-4">
-          <Button onClick={() => setIsDialogOpen(true)} style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}>
-            <Camera className="mr-2 h-4 w-4" />
-            Log Meal
-          </Button>
-          {user && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                  <Avatar>
-                    <AvatarImage src={user.photoURL ?? ''} alt={user.displayName ?? 'User'} />
-                    <AvatarFallback>{(user.displayName?.[0] || user.email?.[0] || 'U').toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="end" forceMount>
-                <DropdownMenuLabel className="font-normal">
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{user.displayName || user.email}</p>
-                    <p className="text-xs leading-none text-muted-foreground">
-                      {user.email}
-                    </p>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={signOut} className="cursor-pointer">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Log out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </div>
+    <div className="relative bg-background flex flex-col h-full max-h-screen sm:max-h-[90vh]">
+      {/* Header */}
+      <header className="flex items-center justify-between p-4 flex-shrink-0">
+        <button className="flex items-center gap-2 font-semibold">
+          <CalendarIcon className="w-5 h-5 text-muted-foreground" />
+          <span>{format(new Date(), 'MMMM')}</span>
+          <ChevronDown className="w-4 h-4 text-muted-foreground" />
+        </button>
+        <Avatar className="h-10 w-10 cursor-pointer" onClick={signOut}>
+          <AvatarImage src={user?.photoURL ?? ''} alt={user?.displayName ?? 'User'} />
+          <AvatarFallback>{(user?.displayName?.[0] || user?.email?.[0] || 'U').toUpperCase()}</AvatarFallback>
+        </Avatar>
       </header>
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-y-auto p-4 space-y-6">
+        <WeekCalendar />
+
+        <Card className="rounded-3xl border-0 bg-primary/20 flex justify-center items-center py-4">
+          <CalorieGauge current={caloriesLeft} goal={dailyGoal} />
+        </Card>
+
+        <div className="grid grid-cols-3 gap-3">
+           <MacroCard title="Protein" value={Math.round(totals.protein)} icon={Flame} colorClass="bg-chart-4/20" />
+           <MacroCard title="Carbs" value={Math.round(totals.carbs)} icon={Zap} colorClass="bg-chart-1/20" />
+           <MacroCard title="Fat" value={Math.round(totals.fat)} icon={Droplets} colorClass="bg-chart-2/20" />
+        </div>
+
+        <div>
+          <h2 className="text-xl font-bold mb-4">Today's Log</h2>
+          <DailyLog
+            mealLogs={mealLogs}
+            isLoading={isLoading}
+            onDelete={handleDeleteMealLog}
+          />
+        </div>
+      </main>
+
+      {/* Bottom Navigation */}
+      <footer className="sticky bottom-0 bg-background/80 backdrop-blur-sm border-t border-border flex-shrink-0">
+          <div className="flex justify-around items-center h-20">
+              <Button variant="ghost" className="flex flex-col h-auto items-center text-muted-foreground hover:text-foreground">
+                  <Home className="w-6 h-6" />
+                  <span className="text-xs mt-1">Home</span>
+              </Button>
+              <Button onClick={() => setIsDialogOpen(true)} size="lg" className="h-16 w-16 rounded-full bg-primary text-primary-foreground shadow-lg -translate-y-6">
+                  <Camera className="w-8 h-8" />
+              </Button>
+              <Button variant="ghost" className="flex flex-col h-auto items-center text-muted-foreground hover:text-foreground">
+                  <LineChart className="w-6 h-6" />
+                  <span className="text-xs mt-1">Analysis</span>
+              </Button>
+          </div>
+      </footer>
       
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <aside className="lg:col-span-1">
-          <Card className="shadow-lg text-center">
-            <CardHeader><CardTitle>Today's Intake</CardTitle></CardHeader>
-            <CardContent className="flex justify-center">
-                <CalorieProgress current={totalCaloriesToday} goal={dailyGoal} />
-            </CardContent>
-          </Card>
-        </aside>
-
-        <main className="lg:col-span-2">
-           <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-2xl font-headline">
-                Today's Log
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <DailyLog
-                mealLogs={mealLogs}
-                isLoading={isLoading}
-                onDelete={handleDeleteMealLog}
-              />
-            </CardContent>
-          </Card>
-        </main>
-      </div>
-
       <MealCaptureDialog
         isOpen={isDialogOpen}
         setIsOpen={setIsDialogOpen}
