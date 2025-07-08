@@ -259,7 +259,7 @@ function ProfilePageContent() {
                              <FormField control={form.control} name="height" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Height ({units === 'imperial' ? 'in' : 'cm'})</FormLabel>
-                                    <FormControl><Input type="number" step="0.1" placeholder={units === 'imperial' ? "65" : "165"} {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
+                                    <FormControl><Input type="number" step="0.1" placeholder={units === 'imperial' ? "65" : "165"} {...field} value={field.value ?? ''} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )} />
@@ -267,14 +267,14 @@ function ProfilePageContent() {
                                <FormField control={form.control} name="currentWeight" render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Weight ({units === 'imperial' ? 'lbs' : 'kg'})</FormLabel>
-                                        <FormControl><Input type="number" step="0.1" placeholder={units === 'imperial' ? "150" : "68"} {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
+                                        <FormControl><Input type="number" step="0.1" placeholder={units === 'imperial' ? "150" : "68"} {...field} value={field.value ?? ''} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )} />
                                <FormField control={form.control} name="desiredWeight" render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Desired Weight ({units === 'imperial' ? 'lbs' : 'kg'})</FormLabel>
-                                        <FormControl><Input type="number" step="0.1" placeholder={units === 'imperial' ? "140" : "64"} {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
+                                        <FormControl><Input type="number" step="0.1" placeholder={units === 'imperial' ? "140" : "64"} {...field} value={field.value ?? ''} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )} />
@@ -306,7 +306,7 @@ function ProfilePageContent() {
                             <FormField control={form.control} name="dailyCalorieGoal" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Daily Calorie Goal (kcal)</FormLabel>
-                                    <FormControl><Input type="number" placeholder="2000" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
+                                    <FormControl><Input type="number" placeholder="2000" {...field} value={field.value ?? ''} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )} />
