@@ -12,7 +12,7 @@ import {
   orderBy,
   where,
 } from 'firebase/firestore';
-import { startOfDay, endOfDay } from 'date-fns';
+import { startOfDay, endOfDay, subDays } from 'date-fns';
 
 
 if (!db) {
@@ -62,6 +62,45 @@ export const getMealLogs = (
 
   return unsubscribe;
 };
+
+export const getMealLogHistory = (
+    userId: string,
+    days: number,
+    onHistoryUpdated: (logs: MealLog[]) => void,
+    onError: (error: Error) => void
+): (() => void) => {
+    const mealLogsCollection = getMealLogsCollection(userId);
+    const startDate = startOfDay(subDays(new Date(), days - 1));
+
+    const q = query(
+        mealLogsCollection,
+        where('createdAt', '>=', startDate),
+        orderBy('createdAt', 'asc')
+    );
+    
+    const unsubscribe = onSnapshot(q, querySnapshot => {
+        const logs = querySnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                foodItems: data.foodItems,
+                totalCalories: data.totalCalories,
+                totalProtein: data.totalProtein,
+                totalCarbs: data.totalCarbs,
+                totalFat: data.totalFat,
+                photoUrl: data.photoUrl,
+                createdAt: (data.createdAt as Timestamp).toDate(),
+            } as MealLog;
+        });
+        onHistoryUpdated(logs);
+    }, (error) => {
+        console.error("Error fetching meal log history:", error);
+        onError(new Error("Failed to fetch meal log history."));
+    });
+
+    return unsubscribe;
+};
+
 
 export const addMealLog = async (userId: string, mealData: Omit<MealLog, 'id' | 'createdAt'>): Promise<string> => {
   const mealLogsCollection = getMealLogsCollection(userId);

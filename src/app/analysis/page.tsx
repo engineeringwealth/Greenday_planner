@@ -9,15 +9,15 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft, Flame, BarChart, Home, Camera, AreaChart, Pencil } from 'lucide-react';
 import { format } from 'date-fns';
-import { Bar, BarChart as RechartsBarChart, XAxis, YAxis, Tooltip, ReferenceLine } from 'recharts';
+import { Bar, BarChart as RechartsBarChart, XAxis, YAxis, Tooltip, ReferenceLine, Cell } from 'recharts';
 import { ChartContainer, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
-import type { UserProfile, WeightHistoryEntry } from '@/lib/types';
+import type { UserProfile, WeightHistoryEntry, MealLog } from '@/lib/types';
 import { getWeightHistory, updateUserProfile, addWeightHistory } from '@/services/user-service';
+import { getMealLogHistory } from '@/services/task-service';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MealCaptureDialog } from '@/components/task-dialog';
 import { addMealLog } from '@/services/task-service';
 import { useToast } from '@/hooks/use-toast';
-import type { MealLog } from '@/lib/types';
 import {
   Dialog,
   DialogContent,
@@ -88,10 +88,52 @@ function ProgressChart({ history, units, goalWeight }: { history: WeightHistoryE
     );
 }
 
+function CalorieConsumptionChart({ data, dailyGoal }: { data: {date: string, calories: number}[], dailyGoal: number }) {
+    const chartConfig = {
+      calories: {
+        label: "Calories (kcal)",
+      },
+    } satisfies ChartConfig;
+
+    return (
+        <ChartContainer config={chartConfig} className="h-[250px] w-full">
+            <RechartsBarChart data={data} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
+                <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
+                <Tooltip
+                    cursor={false}
+                    content={({ active, payload }) => (
+                         <ChartTooltipContent
+                            active={active}
+                            payload={payload}
+                            labelFormatter={(label) => label}
+                            formatter={(value) => `${value} kcal`}
+                            indicator="dot"
+                        />
+                    )}
+                />
+                <ReferenceLine 
+                    y={dailyGoal} 
+                    stroke="hsl(var(--destructive))" 
+                    strokeDasharray="3 3"
+                >
+                    <ReferenceLine.Label value="Daily Goal" position="top" fill="hsl(var(--destructive))" fontSize={12} />
+                </ReferenceLine>
+                <Bar dataKey="calories" radius={[4, 4, 0, 0]}>
+                    {data.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.calories > dailyGoal ? 'hsl(var(--destructive))' : 'hsl(var(--chart-2))'} />
+                    ))}
+                </Bar>
+            </RechartsBarChart>
+        </ChartContainer>
+    );
+}
+
 function AnalysisContent() {
     const { user, userProfile, refetchUserProfile } = useAuth();
     const { toast } = useToast();
     const [weightHistory, setWeightHistory] = useState<WeightHistoryEntry[]>([]);
+    const [mealLogHistory, setMealLogHistory] = useState<MealLog[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     
@@ -105,6 +147,7 @@ function AnalysisContent() {
     const currentWeight = userProfile ? convertWeight(userProfile.currentWeight, units) : 0;
     const desiredWeight = userProfile ? convertWeight(userProfile.desiredWeight, units) : 0;
     const weightToGo = Math.round(Math.abs(currentWeight - desiredWeight) * 10) / 10;
+    const dailyCalorieGoal = userProfile?.dailyCalorieGoal || 2000;
 
     useEffect(() => {
         if (isGoalDialogOpen) {
@@ -121,15 +164,27 @@ function AnalysisContent() {
     useEffect(() => {
         if (user) {
             setIsLoading(true);
-            const unsubscribe = getWeightHistory(user.uid, (history) => {
+            const unsubWeight = getWeightHistory(user.uid, (history) => {
                 setWeightHistory(history);
-                setIsLoading(false);
             }, (error) => {
                 console.error("Failed to fetch weight history:", error);
                 toast({ title: "Error", description: "Could not fetch your progress.", variant: "destructive" });
                 setIsLoading(false);
             });
-            return () => unsubscribe();
+            
+            const unsubLogs = getMealLogHistory(user.uid, 30, (logs) => {
+                setMealLogHistory(logs);
+                setIsLoading(false);
+            }, (error) => {
+                console.error("Failed to fetch meal log history:", error);
+                toast({ title: "Error", description: "Could not fetch your calorie history.", variant: "destructive" });
+                setIsLoading(false);
+            });
+
+            return () => {
+                unsubWeight();
+                unsubLogs();
+            };
         }
     }, [user, toast]);
 
@@ -153,6 +208,27 @@ function AnalysisContent() {
 
         return Math.max(0, Math.min(100, percentage));
     }, [userProfile, weightHistory]);
+
+     const calorieChartData = useMemo(() => {
+        if (!mealLogHistory) return [];
+
+        const dailyCalories: { [key: string]: number } = {};
+
+        mealLogHistory.forEach(log => {
+            const dateStr = format(log.createdAt, 'yyyy-MM-dd');
+            if (!dailyCalories[dateStr]) {
+                dailyCalories[dateStr] = 0;
+            }
+            dailyCalories[dateStr] += log.totalCalories;
+        });
+
+        return Object.entries(dailyCalories)
+            .map(([date, calories]) => ({
+                date: format(new Date(date.replace(/-/g, '/')), 'MMM d'),
+                calories: Math.round(calories),
+            }))
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    }, [mealLogHistory]);
 
     const handleAddMealLog = async (mealData: Omit<MealLog, "id" | "createdAt">) => {
         if (!user) return;
@@ -337,6 +413,30 @@ function AnalysisContent() {
                                 <BarChart className="h-12 w-12 mb-4" />
                                 <p className="font-semibold">Not enough data yet</p>
                                 <p className="text-sm">Update your weight in your profile to see progress.</p>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+
+                <Card className="bg-card/80 rounded-2xl">
+                    <CardHeader>
+                        <div className="flex justify-between items-center">
+                            <CardTitle>Daily Calorie Intake</CardTitle>
+                            <span className="text-sm font-medium text-primary">
+                                Goal: {dailyCalorieGoal} kcal
+                            </span>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        {isLoading ? (
+                            <Skeleton className="h-[250px] w-full" />
+                        ) : calorieChartData.length > 0 ? (
+                            <CalorieConsumptionChart data={calorieChartData} dailyGoal={dailyCalorieGoal} />
+                        ) : (
+                            <div className="h-[250px] flex flex-col items-center justify-center text-center text-muted-foreground">
+                                <Flame className="h-12 w-12 mb-4" />
+                                <p className="font-semibold">No meals logged yet</p>
+                                <p className="text-sm">Log meals to see your calorie intake history.</p>
                             </div>
                         )}
                     </CardContent>
