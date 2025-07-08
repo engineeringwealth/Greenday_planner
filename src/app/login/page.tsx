@@ -7,26 +7,29 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Terminal, Loader2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import Link from 'next/link';
 
 const signInSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
   password: z.string().min(1, { message: "Password cannot be empty." }),
 });
 
-const signUpSchema = z.object({
-  email: z.string().email({ message: "Invalid email address." }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters." }),
-});
-
 export default function LoginPage() {
-  const { signInWithGoogle, user, loading, isFirebaseConfigured, signInWithEmail, signUpWithEmail } = useAuth();
+  const { 
+    user, 
+    loading, 
+    userProfile, 
+    profileLoading, 
+    isFirebaseConfigured,
+    signInWithGoogle, 
+    signInWithEmail, 
+  } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -41,10 +44,15 @@ export default function LoginPage() {
   }, []);
 
   useEffect(() => {
-    if (!loading && user) {
-      router.push('/');
+    // Wait for auth and profile to be loaded
+    if (!loading && !profileLoading) {
+      if (user && userProfile?.onboarded) {
+        router.push('/');
+      } else if (user && (!userProfile || !userProfile.onboarded)) {
+        router.push('/onboarding');
+      }
     }
-  }, [user, loading, router]);
+  }, [user, userProfile, loading, profileLoading, router]);
 
   const GoogleIcon = () => (
     <svg className="mr-2 h-4 w-4" viewBox="0 0 48 48" aria-hidden="true">
@@ -87,94 +95,49 @@ export default function LoginPage() {
       </Form>
     );
   };
-  
-  const SignUpForm = () => {
-    const form = useForm<z.infer<typeof signUpSchema>>({
-      resolver: zodResolver(signUpSchema),
-      defaultValues: { email: "", password: "" },
-    });
-    
-    const onSubmit = (values: z.infer<typeof signUpSchema>) => {
-      signUpWithEmail(values.email, values.password);
-    };
 
+  if (loading || profileLoading || (user && userProfile)) {
     return (
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <FormField control={form.control} name="email" render={({ field }) => (
-            <FormItem>
-              <FormLabel>Email</FormLabel>
-              <FormControl><Input placeholder="m@example.com" {...field} /></FormControl>
-              <FormMessage />
-            </FormItem>
-          )} />
-          <FormField control={form.control} name="password" render={({ field }) => (
-            <FormItem>
-              <FormLabel>Password</FormLabel>
-              <FormControl><Input type="password" {...field} /></FormControl>
-              <FormMessage />
-            </FormItem>
-          )} />
-          <Button type="submit" className="w-full">Create Account</Button>
-        </form>
-      </Form>
-    );
-  };
-
-  if (loading || user) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p>Loading...</p>
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <p className="ml-4">Loading your experience...</p>
       </div>
     );
   }
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-sm shadow-xl">
+      <Card className="w-full max-w-sm shadow-xl border-primary/20">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Welcome</CardTitle>
-          <CardDescription>Welcome to GreenDay Planner! Sign in or create an account to continue.</CardDescription>
+          <CardTitle className="text-2xl font-bold text-primary">Myetician</CardTitle>
+          <CardDescription>Welcome back! Sign in to continue.</CardDescription>
         </CardHeader>
         <CardContent>
           {isFirebaseConfigured ? (
             <>
-            <Tabs defaultValue="signin" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="signin">Sign In</TabsTrigger>
-                <TabsTrigger value="signup">Sign Up</TabsTrigger>
-              </TabsList>
-              <TabsContent value="signin">
-                <Card>
-                  <CardContent className="pt-6">
-                    <SignInForm />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-              <TabsContent value="signup">
-                <Card>
-                  <CardContent className="pt-6">
-                    <SignUpForm />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-            
-            <div className="relative my-4">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
+              <SignInForm />
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">
+                    Or continue with
+                  </span>
+                </div>
               </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
-                  Or continue with
-                </span>
-              </div>
-            </div>
 
-            <Button onClick={signInWithGoogle} className="w-full" variant="outline">
-              <GoogleIcon />
-              Sign in with Google
-            </Button>
+              <Button onClick={() => signInWithGoogle()} className="w-full" variant="outline">
+                <GoogleIcon />
+                Sign in with Google
+              </Button>
+
+              <div className="mt-6 text-center text-sm">
+                New to Myetician?{' '}
+                <Link href="/onboarding" className="font-semibold text-primary hover:underline">
+                  Start the questionnaire
+                </Link>
+              </div>
             </>
           ) : (
             <Alert variant="destructive">
