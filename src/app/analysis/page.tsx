@@ -40,7 +40,7 @@ function convertWeight(weight: number, units: UserProfile['units']) {
 function ProgressChart({ history, units, goalWeight }: { history: WeightHistoryEntry[], units: UserProfile['units'], goalWeight: number }) {
     const chartData = useMemo(() => {
         return history.map(entry => ({
-            date: format(entry.date, 'MMM'),
+            date: format(entry.date, 'MMM d'),
             weight: convertWeight(entry.weight, units),
         }));
     }, [history, units]);
