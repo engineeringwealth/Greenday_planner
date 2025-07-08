@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { updateUserProfile } from '@/services/user-service';
+import { updateUserProfile, addWeightHistory } from '@/services/user-service';
 import { Loader2, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { AuthGuard } from '@/components/auth-guard';
@@ -84,7 +84,7 @@ function ProfilePageContent() {
     };
 
     const onSubmit = async (values: z.infer<typeof profileSchema>) => {
-        if (!user) {
+        if (!user || !userProfile) {
             toast({ title: "Error", description: "You must be logged in.", variant: "destructive" });
             return;
         }
@@ -95,6 +95,11 @@ function ProfilePageContent() {
             if (units === 'metric') {
                 if(values.height) imperialValues.height = values.height / 2.54;
                 imperialValues.currentWeight = values.currentWeight / 0.453592;
+            }
+
+            // Only add a weight history entry if the weight has changed
+            if (Math.abs(imperialValues.currentWeight - userProfile.currentWeight) > 0.1) {
+                await addWeightHistory(user.uid, imperialValues.currentWeight);
             }
 
             await updateUserProfile(user.uid, {

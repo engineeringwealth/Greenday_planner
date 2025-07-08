@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from 'next/navigation';
-import { LogOut, CalendarIcon, ChevronDown, Home, LineChart, Camera, Zap, Flame, Droplets, User } from "lucide-react";
+import { LogOut, CalendarIcon, ChevronDown, Home, LineChart, Camera, Zap, Flame, Droplets, User, AreaChart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -234,17 +234,21 @@ export function CalorieTracker() {
       {/* Bottom Navigation */}
       <footer className="sticky bottom-0 bg-background/80 backdrop-blur-sm border-t border-border flex-shrink-0">
           <div className="flex justify-around items-center h-20">
-              <Button variant="ghost" className="flex flex-col h-auto items-center text-muted-foreground hover:text-foreground">
-                  <Home className="w-6 h-6" />
-                  <span className="text-xs mt-1">Home</span>
-              </Button>
+              <Link href="/" passHref>
+                <Button variant="ghost" className="flex flex-col h-auto items-center text-primary" data-active={true}>
+                    <Home className="w-6 h-6" />
+                    <span className="text-xs mt-1">Home</span>
+                </Button>
+              </Link>
               <Button onClick={() => setIsDialogOpen(true)} size="lg" className="h-16 w-16 rounded-full bg-primary text-primary-foreground shadow-lg -translate-y-6">
                   <Camera className="w-8 h-8" />
               </Button>
-              <Button variant="ghost" className="flex flex-col h-auto items-center text-muted-foreground hover:text-foreground">
-                  <LineChart className="w-6 h-6" />
-                  <span className="text-xs mt-1">Analysis</span>
-              </Button>
+              <Link href="/analysis" passHref>
+                <Button variant="ghost" className="flex flex-col h-auto items-center text-muted-foreground hover:text-primary">
+                    <AreaChart className="w-6 h-6" />
+                    <span className="text-xs mt-1">Analysis</span>
+                </Button>
+              </Link>
           </div>
       </footer>
       

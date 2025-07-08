@@ -30,3 +30,9 @@ export interface UserProfile {
   goalTimeline: number; // in weeks
   dailyCalorieGoal: number;
 }
+
+export interface WeightHistoryEntry {
+    id: string;
+    date: Date;
+    weight: number; // Stored in lbs
+}

@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { updateUserProfile } from '@/services/user-service';
+import { updateUserProfile, addWeightHistory } from '@/services/user-service';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -114,6 +114,9 @@ export default function OnboardingPage() {
         onboarded: true,
         units,
       });
+
+      // Add first entry to weight history
+      await addWeightHistory(user.uid, imperialValues.currentWeight);
 
       await refetchUserProfile();
       toast({ title: "Profile Updated!", description: "Your calorie goal has been set." });
