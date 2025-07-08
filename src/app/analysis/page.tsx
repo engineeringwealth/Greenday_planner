@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft, Flame, TrendingUp, BarChart, Settings, Home, Camera, AreaChart } from 'lucide-react';
 import { format, subDays } from 'date-fns';
-import { Bar, BarChart as RechartsBarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
+import { Bar, BarChart as RechartsBarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, ReferenceLine } from 'recharts';
 import { ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import type { UserProfile, WeightHistoryEntry } from '@/lib/types';
 import { getWeightHistory } from '@/services/user-service';
@@ -26,7 +26,7 @@ function convertWeight(weight: number, units: UserProfile['units']) {
     return Math.round(weight * 10) / 10;
 }
 
-function ProgressChart({ history, units }: { history: WeightHistoryEntry[], units: UserProfile['units'] }) {
+function ProgressChart({ history, units, goalWeight }: { history: WeightHistoryEntry[], units: UserProfile['units'], goalWeight: number }) {
     const chartData = useMemo(() => {
         return history.map(entry => ({
             date: format(entry.date, 'MMM d'),
@@ -34,12 +34,15 @@ function ProgressChart({ history, units }: { history: WeightHistoryEntry[], unit
         }));
     }, [history, units]);
 
-    const domainMin = Math.min(...chartData.map(d => d.weight)) - 2;
-    const domainMax = Math.max(...chartData.map(d => d.weight)) + 2;
+    const allWeights = chartData.map(d => d.weight);
+    if(goalWeight) allWeights.push(goalWeight);
+    
+    const domainMin = allWeights.length > 0 ? Math.min(...allWeights) - 2 : 50;
+    const domainMax = allWeights.length > 0 ? Math.max(...allWeights) + 2 : 100;
 
     return (
         <ResponsiveContainer width="100%" height={250}>
-            <RechartsBarChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+            <RechartsBarChart data={chartData} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
                 <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} domain={[domainMin, domainMax]} />
                 <Tooltip
@@ -54,6 +57,13 @@ function ProgressChart({ history, units }: { history: WeightHistoryEntry[], unit
                         />
                     )}
                 />
+                <ReferenceLine 
+                    y={goalWeight} 
+                    stroke="hsl(var(--destructive))" 
+                    strokeDasharray="3 3"
+                >
+                    <ReferenceLine.Label value="Goal" position="top" fill="hsl(var(--destructive))" fontSize={12} />
+                </ReferenceLine>
                 <Bar dataKey="weight" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
             </RechartsBarChart>
         </ResponsiveContainer>
@@ -141,7 +151,7 @@ function AnalysisContent() {
                         {isLoading ? (
                             <Skeleton className="h-[250px] w-full" />
                         ) : weightHistory.length > 0 ? (
-                            <ProgressChart history={weightHistory} units={units} />
+                            <ProgressChart history={weightHistory} units={units} goalWeight={desiredWeight} />
                         ) : (
                             <div className="h-[250px] flex flex-col items-center justify-center text-center text-muted-foreground">
                                 <BarChart className="h-12 w-12 mb-4" />
