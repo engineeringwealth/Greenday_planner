@@ -181,6 +181,10 @@ function ProfilePageContent() {
                 await addWeightHistory(user.uid, imperialValues.currentWeight);
             }
 
+            const dailyProteinGoal = Math.round((imperialValues.dailyCalorieGoal * 0.3) / 4);
+            const dailyCarbsGoal = Math.round((imperialValues.dailyCalorieGoal * 0.4) / 4);
+            const dailyFatGoal = Math.round((imperialValues.dailyCalorieGoal * 0.3) / 9);
+
             await updateUserProfile(user.uid, {
                 name: imperialValues.name,
                 height: imperialValues.height,
@@ -188,6 +192,9 @@ function ProfilePageContent() {
                 desiredWeight: imperialValues.desiredWeight,
                 goalTimeline: imperialValues.goalTimeline,
                 dailyCalorieGoal: imperialValues.dailyCalorieGoal,
+                dailyProteinGoal,
+                dailyCarbsGoal,
+                dailyFatGoal,
                 units,
             });
 

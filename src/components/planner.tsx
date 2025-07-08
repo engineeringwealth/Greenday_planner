@@ -94,14 +94,14 @@ function WeekCalendar() {
   )
 }
 
-function MacroCard({ title, value, icon: Icon, colorClass }: { title: string, value: number, icon: React.ElementType, colorClass: string }) {
+function MacroCard({ title, value, goal, icon: Icon, colorClass }: { title: string, value: number, goal: number, icon: React.ElementType, colorClass: string }) {
   return (
     <Card className={cn("p-4 flex-1 rounded-3xl border-0", colorClass)}>
       <div className="flex justify-between items-center">
         <Icon className="w-5 h-5 text-foreground/80" />
       </div>
       <div className="mt-4">
-        <p className="text-2xl font-bold tracking-tight text-foreground">{value}<span className="text-base font-medium text-foreground/80">g</span></p>
+        <p className="text-2xl font-bold tracking-tight text-foreground">{value}<span className="text-base font-medium text-foreground/80">/{goal}g</span></p>
         <p className="text-sm font-medium text-foreground/80">{title}</p>
       </div>
     </Card>
@@ -117,6 +117,10 @@ export function CalorieTracker() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const dailyGoal = userProfile?.dailyCalorieGoal ?? 2000;
+  // Use calculated defaults if profile doesn't have them yet (for backward compatibility)
+  const proteinGoal = userProfile?.dailyProteinGoal ?? Math.round((dailyGoal * 0.3) / 4);
+  const carbsGoal = userProfile?.dailyCarbsGoal ?? Math.round((dailyGoal * 0.4) / 4);
+  const fatGoal = userProfile?.dailyFatGoal ?? Math.round((dailyGoal * 0.3) / 9);
 
   useEffect(() => {
     if (user) {
@@ -216,9 +220,9 @@ export function CalorieTracker() {
         </Card>
 
         <div className="grid grid-cols-3 gap-3">
-           <MacroCard title="Protein" value={Math.round(totals.protein)} icon={Flame} colorClass="bg-chart-4/20" />
-           <MacroCard title="Carbs" value={Math.round(totals.carbs)} icon={Zap} colorClass="bg-chart-1/20" />
-           <MacroCard title="Fat" value={Math.round(totals.fat)} icon={Droplets} colorClass="bg-chart-2/20" />
+           <MacroCard title="Protein" value={Math.round(totals.protein)} goal={proteinGoal} icon={Flame} colorClass="bg-chart-4/20" />
+           <MacroCard title="Carbs" value={Math.round(totals.carbs)} goal={carbsGoal} icon={Zap} colorClass="bg-chart-1/20" />
+           <MacroCard title="Fat" value={Math.round(totals.fat)} goal={fatGoal} icon={Droplets} colorClass="bg-chart-2/20" />
         </div>
 
         <div>

@@ -104,6 +104,10 @@ export default function OnboardingPage() {
       
       const dailyCalorieGoal = calculateDailyCalorieGoal(imperialValues.currentWeight, imperialValues.desiredWeight, imperialValues.goalTimeline);
       
+      const dailyProteinGoal = Math.round((dailyCalorieGoal * 0.3) / 4);
+      const dailyCarbsGoal = Math.round((dailyCalorieGoal * 0.4) / 4);
+      const dailyFatGoal = Math.round((dailyCalorieGoal * 0.3) / 9);
+
       await updateUserProfile(user.uid, {
         name: values.name,
         height: imperialValues.height,
@@ -111,6 +115,9 @@ export default function OnboardingPage() {
         desiredWeight: imperialValues.desiredWeight,
         goalTimeline: values.goalTimeline,
         dailyCalorieGoal,
+        dailyProteinGoal,
+        dailyCarbsGoal,
+        dailyFatGoal,
         onboarded: true,
         units,
       });

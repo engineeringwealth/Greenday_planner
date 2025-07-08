@@ -29,6 +29,9 @@ export interface UserProfile {
   desiredWeight: number; // stored in lbs
   goalTimeline: number; // in weeks
   dailyCalorieGoal: number;
+  dailyProteinGoal?: number; // in grams
+  dailyCarbsGoal?: number; // in grams
+  dailyFatGoal?: number; // in grams
 }
 
 export interface WeightHistoryEntry {
