@@ -1,57 +1,23 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { updateUserProfile, addWeightHistory } from '@/services/user-service';
+import { updateUserProfile } from '@/services/user-service';
 import { Loader2, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { AuthGuard } from '@/components/auth-guard';
 import Link from 'next/link';
-import type { UserProfile } from '@/lib/types';
+import type { UserProfile, OnboardingData } from '@/lib/types';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-
-const profileSchema = z.object({
-  name: z.string().min(1, 'Name is required.'),
-  height: z.coerce.number().min(1, 'Height is required.').optional(),
-  currentWeight: z.coerce.number().min(1, 'Current weight is required.'),
-  desiredWeight: z.coerce.number().min(1, 'Desired weight is required.'),
-  goalTimeline: z.coerce.number().min(1, 'Please select a timeline.'),
-  dailyCalorieGoal: z.coerce.number().min(1000, 'Calorie goal must be at least 1000.').max(10000, 'Calorie goal seems too high.'),
-});
-
-
-// Helper functions for calculations
-const calculateDailyCalorieGoal = (currentWeight: number, desiredWeight: number, timelineInWeeks: number) => {
-    const weightDifferenceLbs = currentWeight - desiredWeight;
-    const totalCalorieDifference = weightDifferenceLbs * 3500;
-    const days = timelineInWeeks * 7;
-    
-    if (days <= 0) return 2000;
-  
-    const dailyCalorieDelta = totalCalorieDifference / days;
-    const estimatedTDEE = currentWeight * 14;
-    const goal = Math.round(estimatedTDEE - dailyCalorieDelta);
-  
-    return Math.max(1200, Math.min(4000, goal));
-};
-
-const calculateBmi = (weightLbs: number, heightInches: number) => {
-    if (!weightLbs || !heightInches || heightInches <= 0) return null;
-    const weightKg = weightLbs * 0.453592;
-    const heightM = heightInches * 0.0254;
-    const bmi = weightKg / (heightM * heightM);
-    return Math.round(bmi * 10) / 10;
-};
+import { Slider } from '@/components/ui/slider';
+import { calculateHealthMetrics } from '@/lib/health-utils';
+import { cn } from '@/lib/utils';
 
 
 function ProfilePageContent() {
@@ -59,145 +25,69 @@ function ProfilePageContent() {
     const router = useRouter();
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [units, setUnits] = useState<UserProfile['units']>('imperial');
-    const [calculatedBmi, setCalculatedBmi] = useState<number | null>(null);
-
-    const form = useForm<z.infer<typeof profileSchema>>({
-        resolver: zodResolver(profileSchema),
-        defaultValues: {
-            name: '',
-            height: undefined,
-            currentWeight: undefined,
-            desiredWeight: undefined,
-            goalTimeline: undefined,
-            dailyCalorieGoal: undefined,
-        },
-    });
-
-    const { watch, setValue, getValues } = form;
-
-    // Watch individual fields. This prevents the infinite loop.
-    const height = watch('height');
-    const currentWeight = watch('currentWeight');
-    const desiredWeight = watch('desiredWeight');
-    const goalTimeline = watch('goalTimeline');
+    const [formData, setFormData] = useState<OnboardingData | null>(null);
 
     useEffect(() => {
         if (userProfile) {
-            const displayUnits = userProfile.units || 'imperial';
-            setUnits(displayUnits);
-
-            const round = (num: number) => Math.round(num * 10) / 10;
-
-            const displayValues = {
-                name: userProfile.name || user?.displayName || '',
-                dailyCalorieGoal: userProfile.dailyCalorieGoal,
-                height: userProfile.height,
-                currentWeight: userProfile.currentWeight,
-                desiredWeight: userProfile.desiredWeight,
-                goalTimeline: userProfile.goalTimeline,
-            };
-
-            if (displayUnits === 'metric' && displayValues.height && displayValues.currentWeight && displayValues.desiredWeight) {
-                displayValues.height = round(displayValues.height * 2.54);
-                displayValues.currentWeight = round(displayValues.currentWeight * 0.453592);
-                displayValues.desiredWeight = round(displayValues.desiredWeight * 0.453592);
-            }
-            
-            form.reset(displayValues);
+            setFormData({
+                goal: userProfile.goal,
+                name: userProfile.name || '',
+                activityLevel: userProfile.activityLevel,
+                gender: userProfile.gender,
+                dob: userProfile.dob,
+                units: userProfile.units,
+                height: userProfile.units === 'metric' ? userProfile.height * 2.54 : userProfile.height,
+                currentWeight: userProfile.units === 'metric' ? userProfile.currentWeight * 0.453592 : userProfile.currentWeight,
+                goalWeight: userProfile.units === 'metric' ? userProfile.goalWeight * 0.453592 : userProfile.goalWeight,
+                intensity: userProfile.intensity,
+            });
         }
-    }, [userProfile, user, form]);
+    }, [userProfile]);
     
-    // This effect now correctly depends on individual values
-    useEffect(() => {
-        // Calculate BMI
-        if (currentWeight && height && units) {
-            let imperialWeight = currentWeight;
-            let imperialHeight = height;
-            if (units === 'metric') {
-                imperialWeight = currentWeight / 0.453592;
-                imperialHeight = height / 2.54;
-            }
-            const bmi = calculateBmi(imperialWeight, imperialHeight);
-            setCalculatedBmi(bmi);
-        }
+    const healthMetrics = useMemo(() => {
+        if (!formData) return null;
+        return calculateHealthMetrics(formData);
+    }, [formData]);
 
-        // Calculate recommended calorie goal
-        if (currentWeight && desiredWeight && goalTimeline && units) {
-            let imperialCurrentWeight = currentWeight;
-            let imperialDesiredWeight = desiredWeight;
-
-            if (units === 'metric') {
-                imperialCurrentWeight = currentWeight / 0.453592;
-                imperialDesiredWeight = desiredWeight / 0.453592;
-            }
-            
-            const calorieGoal = calculateDailyCalorieGoal(imperialCurrentWeight, imperialDesiredWeight, goalTimeline);
-            
-            // Only update the form if the calculated value is different.
-            if (getValues('dailyCalorieGoal') !== calorieGoal) {
-              setValue('dailyCalorieGoal', calorieGoal, { shouldValidate: true });
-            }
-        }
-
-    }, [height, currentWeight, desiredWeight, goalTimeline, units, setValue, getValues]);
-
-    const handleUnitChange = (newUnit: UserProfile['units']) => {
-        if (units === newUnit) return;
-
-        const { height, currentWeight, desiredWeight } = form.getValues();
-        const round = (num: number) => Math.round(num * 10) / 10;
+    const handleUnitChange = (newUnits: 'metric' | 'imperial') => {
+        if (!formData || formData.units === newUnits) return;
         
-        if (newUnit === 'metric') {
-            if (height) form.setValue('height', round(height * 2.54), { shouldValidate: true });
-            if (currentWeight) form.setValue('currentWeight', round(currentWeight * 0.453592), { shouldValidate: true });
-            if (desiredWeight) form.setValue('desiredWeight', round(desiredWeight * 0.453592), { shouldValidate: true });
-        } else { // newUnit is 'imperial'
-            if (height) form.setValue('height', round(height / 2.54), { shouldValidate: true });
-            if (currentWeight) form.setValue('currentWeight', round(currentWeight / 0.453592), { shouldValidate: true });
-            if (desiredWeight) form.setValue('desiredWeight', round(desiredWeight / 0.453592), { shouldValidate: true });
+        const round = (num: number) => Math.round(num * 10) / 10;
+        let { height, currentWeight, goalWeight } = formData;
+
+        if (newUnits === 'metric') { // from imperial to metric
+            height = round(height * 2.54);
+            currentWeight = round(currentWeight * 0.453592);
+            goalWeight = round(goalWeight * 0.453592);
+        } else { // from metric to imperial
+            height = round(height / 2.54);
+            currentWeight = round(currentWeight / 0.453592);
+            goalWeight = round(goalWeight / 0.453592);
         }
+        setFormData(prev => prev ? ({ ...prev, units: newUnits, height, currentWeight, goalWeight }) : null);
+    }
 
-        setUnits(newUnit);
-    };
-
-    const onSubmit = async (values: z.infer<typeof profileSchema>) => {
-        if (!user || !userProfile) {
+    const onSubmit = async () => {
+        if (!user || !formData) {
             toast({ title: "Error", description: "You must be logged in.", variant: "destructive" });
             return;
         }
 
         setIsSubmitting(true);
         try {
-            const imperialValues = { ...values };
-            if (units === 'metric') {
-                if(values.height) imperialValues.height = values.height / 2.54;
-                imperialValues.currentWeight = values.currentWeight / 0.453592;
-                imperialValues.desiredWeight = values.desiredWeight / 0.453592;
+            const finalProfileData: Partial<UserProfile> = {
+                ...formData,
+                ...calculateHealthMetrics(formData)
+            };
+            
+            // Convert back to imperial for storage
+            if (formData.units === 'metric') {
+                finalProfileData.height = formData.height / 2.54;
+                finalProfileData.currentWeight = formData.currentWeight / 0.453592;
+                finalProfileData.goalWeight = formData.goalWeight / 0.453592;
             }
 
-            // Only add a weight history entry if the weight has changed
-            if (Math.abs(imperialValues.currentWeight - userProfile.currentWeight) > 0.1) {
-                await addWeightHistory(user.uid, imperialValues.currentWeight);
-            }
-
-            const dailyProteinGoal = Math.round((imperialValues.dailyCalorieGoal * 0.3) / 4);
-            const dailyCarbsGoal = Math.round((imperialValues.dailyCalorieGoal * 0.4) / 4);
-            const dailyFatGoal = Math.round((imperialValues.dailyCalorieGoal * 0.3) / 9);
-
-            await updateUserProfile(user.uid, {
-                name: imperialValues.name,
-                height: imperialValues.height,
-                currentWeight: imperialValues.currentWeight,
-                desiredWeight: imperialValues.desiredWeight,
-                goalTimeline: imperialValues.goalTimeline,
-                dailyCalorieGoal: imperialValues.dailyCalorieGoal,
-                dailyProteinGoal,
-                dailyCarbsGoal,
-                dailyFatGoal,
-                units,
-            });
-
+            await updateUserProfile(user.uid, finalProfileData);
             await refetchUserProfile();
             toast({ title: "Profile Updated!", description: "Your information has been saved." });
             router.push('/');
@@ -210,17 +100,19 @@ function ProfilePageContent() {
         }
     };
     
-    if (profileLoading || !userProfile) {
+    if (profileLoading || !userProfile || !formData) {
         return (
             <div className="flex min-h-screen items-center justify-center">
                 <Loader2 className="h-8 w-8 animate-spin" />
             </div>
         );
     }
+    
+    const isMetric = formData.units === 'metric';
 
     return (
         <main className="flex min-h-screen items-center justify-center bg-background p-4">
-            <Card className="w-full max-w-md shadow-xl">
+            <Card className="w-full max-w-2xl shadow-xl">
                 <CardHeader>
                   <div className="flex items-center gap-4">
                     <Link href="/" passHref>
@@ -234,103 +126,134 @@ function ProfilePageContent() {
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent>
-                    <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                            <FormField
-                                control={form.control}
-                                name="units"
-                                render={({ field }) => (
-                                <FormItem className="space-y-3">
-                                    <FormLabel>Units</FormLabel>
-                                    <FormControl>
-                                    <RadioGroup
-                                        onValueChange={handleUnitChange}
-                                        value={units}
-                                        className="flex space-x-4"
-                                    >
-                                        <FormItem className="flex items-center space-x-2">
-                                        <FormControl><RadioGroupItem value="imperial" id="imperial" /></FormControl>
-                                        <FormLabel htmlFor="imperial" className="font-normal">lbs / inches</FormLabel>
-                                        </FormItem>
-                                        <FormItem className="flex items-center space-x-2">
-                                        <FormControl><RadioGroupItem value="metric" id="metric" /></FormControl>
-                                        <FormLabel htmlFor="metric" className="font-normal">kg / cm</FormLabel>
-                                        </FormItem>
-                                    </RadioGroup>
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
-
-                            <FormField control={form.control} name="name" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Name</FormLabel>
-                                    <FormControl><Input placeholder="Jane Doe" {...field} /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )} />
-                             <FormField control={form.control} name="height" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Height ({units === 'imperial' ? 'in' : 'cm'})</FormLabel>
-                                    <FormControl><Input type="number" step="0.1" placeholder={units === 'imperial' ? "65" : "165"} {...field} value={field.value ?? ''} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )} />
-                            <div className="grid grid-cols-2 gap-4">
-                               <FormField control={form.control} name="currentWeight" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Weight ({units === 'imperial' ? 'lbs' : 'kg'})</FormLabel>
-                                        <FormControl><Input type="number" step="0.1" placeholder={units === 'imperial' ? "150" : "68"} {...field} value={field.value ?? ''} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
-                               <FormField control={form.control} name="desiredWeight" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Desired Weight ({units === 'imperial' ? 'lbs' : 'kg'})</FormLabel>
-                                        <FormControl><Input type="number" step="0.1" placeholder={units === 'imperial' ? "140" : "64"} {...field} value={field.value ?? ''} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
+                <CardContent className="space-y-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                       <div className="space-y-6">
+                           <Input value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} placeholder="Your Name" />
+                           
+                            <div>
+                               <h3 className="text-base font-medium mb-2">Primary Goal</h3>
+                                <RadioGroup
+                                    value={formData.goal}
+                                    onValueChange={(value) => setFormData({ ...formData, goal: value as any })}
+                                    className="grid grid-cols-3 gap-2"
+                                >
+                                    {['lose', 'maintain', 'gain'].map(g => (
+                                        <label key={g} htmlFor={`goal-${g}`} className={cn("flex items-center text-sm justify-center p-2 rounded-md border-2 cursor-pointer transition-colors h-10", formData.goal === g ? "border-primary bg-primary/10" : "border-card hover:border-primary/50")}>
+                                            {g.charAt(0).toUpperCase() + g.slice(1)}
+                                            <RadioGroupItem value={g} id={`goal-${g}`} className="sr-only" />
+                                        </label>
+                                    ))}
+                                </RadioGroup>
                             </div>
-                            <FormField control={form.control} name="goalTimeline" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Goal Timeline</FormLabel>
-                                    <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
-                                    <FormControl>
-                                        <SelectTrigger><SelectValue placeholder="Select a timeframe" /></SelectTrigger>
-                                    </FormControl>
+
+                           <div>
+                               <h3 className="text-base font-medium mb-2">Gender</h3>
+                                <RadioGroup
+                                    value={formData.gender}
+                                    onValueChange={(value) => setFormData({ ...formData, gender: value as any })}
+                                    className="grid grid-cols-2 gap-4"
+                                >
+                                     <label htmlFor="male" className={cn("flex items-center justify-center p-2 rounded-md border-2 cursor-pointer transition-colors h-10", formData.gender === 'male' ? "border-primary bg-primary/10" : "border-card hover:border-primary/50")}>
+                                        Male
+                                        <RadioGroupItem value="male" id="male" className="sr-only" />
+                                    </label>
+                                    <label htmlFor="female" className={cn("flex items-center justify-center p-2 rounded-md border-2 cursor-pointer transition-colors h-10", formData.gender === 'female' ? "border-primary bg-primary/10" : "border-card hover:border-primary/50")}>
+                                        Female
+                                        <RadioGroupItem value="female" id="female" className="sr-only" />
+                                    </label>
+                                </RadioGroup>
+                            </div>
+                           
+                            <div>
+                                <h3 className="text-base font-medium mb-2">Activity Level</h3>
+                                <Select value={formData.activityLevel} onValueChange={value => setFormData({...formData, activityLevel: value as any})}>
+                                    <SelectTrigger><SelectValue/></SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="4">4 Weeks</SelectItem>
-                                        <SelectItem value="8">8 Weeks</SelectItem>
-                                        <SelectItem value="12">12 Weeks</SelectItem>
-                                        <SelectItem value="16">16 Weeks</SelectItem>
+                                        <SelectItem value="sedentary">Sedentary</SelectItem>
+                                        <SelectItem value="lightly">Lightly Active</SelectItem>
+                                        <SelectItem value="moderately">Moderately Active</SelectItem>
+                                        <SelectItem value="very">Very Active</SelectItem>
+                                        <SelectItem value="extremely">Extremely Active</SelectItem>
                                     </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                            )}/>
-
-                            {calculatedBmi && (
-                                <div className="text-sm p-3 bg-muted/50 rounded-lg">
-                                    Your calculated BMI is <span className="font-bold text-foreground">{calculatedBmi.toFixed(1)}</span>.
+                                </Select>
+                            </div>
+                       </div>
+                       <div className="space-y-6">
+                           <div className="flex justify-end">
+                                <Select value={formData.units} onValueChange={(val) => handleUnitChange(val as any)}>
+                                    <SelectTrigger className="w-auto inline-flex h-8">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="metric">kg / cm</SelectItem>
+                                        <SelectItem value="imperial">lbs / in</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                           
+                            <div className="space-y-2">
+                                <div className="flex justify-between items-center">
+                                    <label className="text-sm font-medium">Height</label>
+                                    <span className="font-bold text-primary text-sm">{formData.height.toFixed(isMetric ? 0 : 1)} {isMetric ? 'cm' : 'in'}</span>
                                 </div>
-                            )}
+                                <Slider value={[formData.height]} onValueChange={([v]) => setFormData({...formData, height: v})} min={isMetric ? 120 : 48} max={isMetric ? 220 : 86} step={isMetric ? 1 : 0.5} />
+                            </div>
 
-                            <FormField control={form.control} name="dailyCalorieGoal" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Daily Calorie Goal (kcal)</FormLabel>
-                                    <FormControl><Input type="number" placeholder="2000" {...field} value={field.value ?? ''} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )} />
-                            <Button type="submit" className="w-full" disabled={isSubmitting}>
-                                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Save Changes
-                            </Button>
-                        </form>
-                    </Form>
+                             <div className="space-y-2">
+                                <div className="flex justify-between items-center">
+                                    <label className="text-sm font-medium">Current Weight</label>
+                                    <span className="font-bold text-primary text-sm">{formData.currentWeight.toFixed(1)} {isMetric ? 'kg' : 'lbs'}</span>
+                                </div>
+                                <Slider value={[formData.currentWeight]} onValueChange={([v]) => setFormData({...formData, currentWeight: v})} min={isMetric ? 30 : 65} max={isMetric ? 180 : 400} step={0.1} />
+                            </div>
+
+                             <div className="space-y-2">
+                                <div className="flex justify-between items-center">
+                                    <label className="text-sm font-medium">Goal Weight</label>
+                                    <span className="font-bold text-primary text-sm">{formData.goalWeight.toFixed(1)} {isMetric ? 'kg' : 'lbs'}</span>
+                                </div>
+                                <Slider value={[formData.goalWeight]} onValueChange={([v]) => setFormData({...formData, goalWeight: v})} min={isMetric ? 30 : 65} max={isMetric ? 180 : 400} step={0.1} />
+                            </div>
+
+                            <div className="space-y-2">
+                                <div className="flex justify-between items-center">
+                                    <label className="text-sm font-medium">Intensity</label>
+                                    <span className="font-bold text-primary text-sm">{formData.intensity}%</span>
+                                </div>
+                                <Slider value={[formData.intensity]} onValueChange={([v]) => setFormData({...formData, intensity: v})} min={10} max={30} step={1} />
+                            </div>
+                       </div>
+                    </div>
+                    
+                     <Card className="bg-card/80 mt-8">
+                        <CardHeader>
+                            <CardTitle className="text-lg">Estimated Daily Goals</CardTitle>
+                        </CardHeader>
+                        <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                            <div>
+                                <p className="text-2xl font-bold text-primary">{healthMetrics?.dailyCalorieGoal}</p>
+                                <p className="text-sm text-muted-foreground">Calories</p>
+                            </div>
+                             <div>
+                                <p className="text-2xl font-bold">{healthMetrics?.dailyProteinGoal}g</p>
+                                <p className="text-sm text-muted-foreground">Protein</p>
+                            </div>
+                             <div>
+                                <p className="text-2xl font-bold">{healthMetrics?.dailyCarbsGoal}g</p>
+                                <p className="text-sm text-muted-foreground">Carbs</p>
+                            </div>
+                             <div>
+                                <p className="text-2xl font-bold">{healthMetrics?.dailyFatGoal}g</p>
+                                <p className="text-sm text-muted-foreground">Fat</p>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Button onClick={onSubmit} className="w-full mt-8" disabled={isSubmitting}>
+                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Save Changes
+                    </Button>
                 </CardContent>
             </Card>
         </main>

@@ -15,8 +15,9 @@ import {
 import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { getUserProfile } from '@/services/user-service';
-import type { UserProfile } from '@/lib/types';
+import { getUserProfile, updateUserProfile } from '@/services/user-service';
+import type { UserProfile, OnboardingData } from '@/lib/types';
+import { calculateHealthMetrics } from '@/lib/health-utils';
 
 interface AuthContextType {
   user: User | null;
@@ -24,9 +25,9 @@ interface AuthContextType {
   loading: boolean;
   profileLoading: boolean;
   isFirebaseConfigured: boolean;
-  signInWithGoogle: () => Promise<void>;
+  signInWithGoogle: (onboardingData?: OnboardingData) => Promise<void>;
   signOut: () => Promise<void>;
-  signUpWithEmail: (email: string, password: string) => Promise<void>;
+  signUpWithEmail: (email: string, password: string, onboardingData: OnboardingData) => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
   refetchUserProfile: () => Promise<void>;
 }
@@ -48,10 +49,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const profile = await getUserProfile(uid);
       setUserProfile(profile);
+      return profile;
     } catch (e) {
       console.error("Failed to fetch user profile", e);
       setUserProfile(null);
       toast({ title: "Error", description: "Could not load your profile.", variant: "destructive" });
+      return null;
     } finally {
       setProfileLoading(false);
     }
@@ -101,6 +104,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       case 'auth/invalid-email':
         message = 'Please enter a valid email address.';
         break;
+      case 'auth/popup-closed-by-user':
+        message = 'Sign-in process was cancelled.';
+        break;
       default:
         message = error.message;
         break;
@@ -110,24 +116,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       description: message,
       variant: "destructive",
     });
+    throw error;
   };
 
-  const signInWithGoogle = async () => {
+  const processOnboarding = async (uid: string, onboardingData: OnboardingData) => {
+    const healthMetrics = calculateHealthMetrics(onboardingData);
+    
+    const finalProfileData: Partial<UserProfile> = {
+      ...onboardingData,
+      ...healthMetrics,
+      onboarded: true,
+    };
+    
+    // Convert units to imperial for storage
+    if (onboardingData.units === 'metric') {
+        finalProfileData.height = onboardingData.height / 2.54;
+        finalProfileData.currentWeight = onboardingData.currentWeight / 0.453592;
+        finalProfileData.goalWeight = onboardingData.goalWeight / 0.453592;
+    }
+
+    await updateUserProfile(uid, finalProfileData);
+  }
+
+  const signInWithGoogle = async (onboardingData?: OnboardingData) => {
     if (!auth) return;
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
-      // Let the AuthGuard handle redirection
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      
+      const existingProfile = await getUserProfile(user.uid);
+      if (!existingProfile?.onboarded && onboardingData) {
+        // This is a new user signing up via onboarding
+        await processOnboarding(user.uid, onboardingData);
+      }
+      // For existing users, onAuthStateChanged will fetch their profile.
+      // After processing, router will push to '/'
     } catch (error) {
       handleAuthError(error as AuthError);
     }
   };
 
-  const signUpWithEmail = async (email: string, password: string) => {
+  const signUpWithEmail = async (email: string, password: string, onboardingData: OnboardingData) => {
     if (!auth) return;
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
-      // Let the AuthGuard handle redirection
+      const result = await createUserWithEmailAndPassword(auth, email, password);
+      await processOnboarding(result.user.uid, onboardingData);
     } catch (error) {
       handleAuthError(error as AuthError);
     }
@@ -137,7 +171,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!auth) return;
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      // Let the AuthGuard handle redirection
     } catch (error) {
       handleAuthError(error as AuthError);
     }

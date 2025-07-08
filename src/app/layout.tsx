@@ -2,9 +2,16 @@ import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import { Providers } from './providers';
+import { PT_Sans } from 'next/font/google';
+
+const ptSans = PT_Sans({
+  subsets: ['latin'],
+  weight: ['400', '700'],
+  variable: '--font-pt-sans',
+});
 
 export const metadata: Metadata = {
-  title: 'SnapCalTracker',
+  title: 'Myetician',
   description: 'The AI-powered app to track your calories with a snap.',
 };
 
@@ -16,7 +23,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
       <head />
-      <body className="font-sans antialiased">
+      <body className={`${ptSans.variable} font-sans antialiased`}>
         <Providers>
           {children}
         </Providers>
