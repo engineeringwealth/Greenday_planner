@@ -11,7 +11,7 @@ const ptSans = PT_Sans({
 });
 
 export const metadata: Metadata = {
-  title: 'Myetician',
+  title: 'GreenDay Planner',
   description: 'The AI-powered app to track your calories with a snap.',
 };
 

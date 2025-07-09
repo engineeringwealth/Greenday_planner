@@ -33,7 +33,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     // If the user is logged in and their profile is loaded, redirect them away from the login page.
-    // AuthGuard, which wraps the destination page, will handle routing to the correct place (onboarding or home).
+    // AuthGuard on the destination page will handle any further routing (e.g., to onboarding).
     if (user && userProfile) {
       router.push('/');
     }
@@ -82,67 +82,68 @@ export default function LoginPage() {
     );
   };
 
-  // If auth is still loading, or if a user is logged in (meaning we are about to redirect),
-  // show the loading screen. This prevents the login form from flashing on screen for a
-  // logged in user and fixes the race condition causing the page to get stuck.
-  if (loading || user) {
+  // The only time we should show the login form is when the initial auth check is complete (`!loading`)
+  // and there is no user logged in (`!user`).
+  if (!loading && !user) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin" />
-        <p className="ml-4">Loading your experience...</p>
-      </div>
+      <main className="flex min-h-screen items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-sm shadow-xl">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl font-bold text-primary">GreenDay Planner</CardTitle>
+            <CardDescription>Welcome back! Sign in to continue.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isFirebaseConfigured ? (
+              <>
+                <SignInForm />
+                <div className="relative my-4">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-card px-2 text-muted-foreground">
+                      Or continue with
+                    </span>
+                  </div>
+                </div>
+
+                <Button onClick={() => signInWithGoogle()} className="w-full" variant="outline">
+                  <GoogleIcon />
+                  Sign in with Google
+                </Button>
+
+                <div className="mt-6 text-center text-sm">
+                  New to GreenDay Planner?{' '}
+                  <Link href="/onboarding" className="font-semibold text-primary hover:underline">
+                    Start the questionnaire
+                  </Link>
+                </div>
+              </>
+            ) : (
+              <Alert variant="destructive">
+                <Terminal className="h-4 w-4" />
+                <AlertTitle>Firebase Not Configured</AlertTitle>
+                <AlertDescription>
+                  Your Firebase API key is missing. Please add it to your{' '}
+                  <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold">
+                    .env.local
+                  </code>{' '}
+                  file.
+                </AlertDescription>
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
+      </main>
     );
   }
 
+  // In all other cases (e.g., initial load, or user is logged in and waiting for redirect),
+  // show a loading screen. This prevents the login form from flashing and avoids getting stuck.
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-sm shadow-xl">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold text-primary">Myetician</CardTitle>
-          <CardDescription>Welcome back! Sign in to continue.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isFirebaseConfigured ? (
-            <>
-              <SignInForm />
-              <div className="relative my-4">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card px-2 text-muted-foreground">
-                    Or continue with
-                  </span>
-                </div>
-              </div>
-
-              <Button onClick={() => signInWithGoogle()} className="w-full" variant="outline">
-                <GoogleIcon />
-                Sign in with Google
-              </Button>
-
-              <div className="mt-6 text-center text-sm">
-                New to Myetician?{' '}
-                <Link href="/onboarding" className="font-semibold text-primary hover:underline">
-                  Start the questionnaire
-                </Link>
-              </div>
-            </>
-          ) : (
-            <Alert variant="destructive">
-              <Terminal className="h-4 w-4" />
-              <AlertTitle>Firebase Not Configured</AlertTitle>
-              <AlertDescription>
-                Your Firebase API key is missing. Please add it to your{' '}
-                <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold">
-                  .env.local
-                </code>{' '}
-                file.
-              </AlertDescription>
-            </Alert>
-          )}
-        </CardContent>
-      </Card>
-    </main>
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <Loader2 className="h-8 w-8 animate-spin" />
+      <p className="ml-4">Loading your experience...</p>
+    </div>
   );
 }

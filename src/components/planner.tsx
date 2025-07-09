@@ -41,7 +41,7 @@ function CalorieGauge({ consumed, goal }: { consumed: number; goal: number }) {
             <div className="relative h-48 w-48">
               <svg className="h-full w-full" viewBox="0 0 200 200">
                 <circle className="text-muted/20" strokeWidth="16" stroke="currentColor" fill="transparent" r="90" cx="100" cy="100" />
-                <circle className="text-chart-5" strokeWidth="16" stroke="currentColor" fill="transparent" r="90" cx="100" cy="100" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} style={{ transition: 'stroke-dashoffset 0.5s ease-in-out' }} transform="rotate(-90 100 100)" />
+                <circle className="text-primary" strokeWidth="16" stroke="currentColor" fill="transparent" r="90" cx="100" cy="100" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} style={{ transition: 'stroke-dashoffset 0.5s ease-in-out' }} transform="rotate(-90 100 100)" />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span className="text-6xl font-bold text-foreground tracking-tighter">{Math.round(consumed)}</span>
@@ -275,7 +275,7 @@ export function CalorieTracker() {
                     <span className="text-xs mt-1">Home</span>
                 </Button>
               </Link>
-              <Button onClick={() => setIsDialogOpen(true)} size="lg" className="h-16 w-16 rounded-full bg-primary text-primary-foreground shadow-lg -translate-y-6">
+              <Button onClick={() => setIsDialogOpen(true)} size="lg" className="h-16 w-16 rounded-full bg-accent text-accent-foreground shadow-lg -translate-y-6">
                   <Camera className="w-8 h-8" />
               </Button>
               <Link href="/analysis" passHref>

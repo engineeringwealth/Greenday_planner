@@ -3,6 +3,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/auth-context';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -46,7 +47,7 @@ function StepIndicator({ step }: { step: number }) {
 function OnboardingHeader() {
     return (
         <div className="w-full flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-primary">Myetician</h1>
+            <h1 className="text-2xl font-bold text-primary">GreenDay Planner</h1>
              <p className="text-sm text-muted-foreground">
                 Already have an account?{' '}
                 <Link href="/login" className="font-semibold text-primary hover:underline">
@@ -439,12 +440,21 @@ function EmailSignUpModal({ isOpen, onClose, onSignUp }) {
 }
 
 export default function OnboardingPage() {
-    const { user, profileLoading, signUpWithEmail, signInWithGoogle } = useAuth();
+    const { user, loading, userProfile, profileLoading, signUpWithEmail, signInWithGoogle } = useAuth();
+    const router = useRouter();
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [step, setStep] = useState(1);
     const [formData, setFormData] = useState<OnboardingData>(defaultFormData);
     const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+
+    useEffect(() => {
+        // If a user is logged in and has already completed onboarding, they don't belong here.
+        // Redirect them to the main application page.
+        if (user && userProfile?.onboarded) {
+            router.push('/');
+        }
+    }, [user, userProfile, router]);
 
 
     const handleNext = () => {
@@ -503,12 +513,19 @@ export default function OnboardingPage() {
         }
     };
     
-    if (profileLoading || user) {
+    // Show a loading screen while waiting for auth state or the user's profile to load.
+    if (loading || profileLoading) {
         return (
             <div className="flex min-h-screen items-center justify-center bg-background">
                 <Loader2 className="h-8 w-8 animate-spin" />
             </div>
         );
+    }
+    
+    // If a user is logged in and onboarded, the useEffect above will redirect them.
+    // We can render null here to prevent the form from flashing while that happens.
+    if (user && userProfile) {
+        return null;
     }
     
     return (
