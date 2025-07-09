@@ -442,6 +442,7 @@ function EmailSignUpModal({ isOpen, onClose, onSignUp }) {
 export default function OnboardingPage() {
     const { loading, profileLoading, signUpWithEmail, signInWithGoogle } = useAuth();
     const { toast } = useToast();
+    const router = useRouter();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [step, setStep] = useState(1);
     const [formData, setFormData] = useState<OnboardingData>(defaultFormData);
@@ -476,7 +477,7 @@ export default function OnboardingPage() {
                 await signUpWithEmail(email, password, finalProfileData);
             }
             toast({ title: "Welcome!", description: "Your account has been created and your plan is ready." });
-            // The AuthGuard will handle routing.
+            router.push('/');
         } catch (error) {
             console.error("Onboarding auth failed:", error);
             // Error toast is handled by auth context
@@ -543,3 +544,5 @@ export default function OnboardingPage() {
         </main>
     );
 }
+
+    
