@@ -88,6 +88,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [isFirebaseConfigured, fetchUserProfile]);
 
   const handleAuthError = (error: AuthError) => {
+    // These errors are typically caused by the user closing the sign-in popup.
+    // We can safely ignore them and don't need to show an error message or crash the app.
+    if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
+        console.log("Sign-in process was cancelled by the user.");
+        return; // Exit gracefully.
+    }
+
     console.error("Authentication Error", error);
     let message = "An unknown error occurred.";
     switch (error.code) {
@@ -104,9 +111,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       case 'auth/invalid-email':
         message = 'Please enter a valid email address.';
         break;
-      case 'auth/popup-closed-by-user':
-        message = 'Sign-in process was cancelled.';
-        break;
       default:
         message = error.message;
         break;
@@ -116,7 +120,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       description: message,
       variant: "destructive",
     });
-    throw error;
+    // Do not re-throw the error, as it will cause an unhandled promise rejection
+    // and show an error overlay in Next.js. The toast is sufficient feedback.
   };
 
   const processOnboarding = async (uid: string, onboardingData: OnboardingData) => {
