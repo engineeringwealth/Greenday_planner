@@ -4,8 +4,6 @@
 import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal, Loader2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
@@ -30,26 +28,6 @@ export default function LoginPage() {
     signInWithGoogle, 
     signInWithEmail, 
   } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    // This log helps debug the "auth/unauthorized-domain" error.
-    // It prints the exact hostname that needs to be whitelisted in Firebase.
-    if (typeof window !== 'undefined') {
-      console.log(
-        "Please ensure this hostname is in your Firebase project's 'Authorized domains' list:",
-        window.location.hostname
-      );
-    }
-  }, []);
-
-  useEffect(() => {
-    // If the user is already logged in and onboarded, redirect them away from the login page.
-    // The AuthGuard will handle protecting other routes.
-    if (!loading && !profileLoading && user && userProfile?.onboarded) {
-      router.push('/');
-    }
-  }, [user, userProfile, loading, profileLoading]);
 
   const GoogleIcon = () => (
     <svg className="mr-2 h-4 w-4" viewBox="0 0 48 48" aria-hidden="true">
@@ -104,7 +82,7 @@ export default function LoginPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-sm shadow-xl">
+      <Card className="w-full max-w-sm shadow-xl border-0">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold text-primary">Myetician</CardTitle>
           <CardDescription>Welcome back! Sign in to continue.</CardDescription>

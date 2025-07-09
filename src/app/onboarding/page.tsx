@@ -3,7 +3,6 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -441,18 +440,12 @@ function EmailSignUpModal({ isOpen, onClose, onSignUp }) {
 
 export default function OnboardingPage() {
     const { user, profileLoading, signUpWithEmail, signInWithGoogle } = useAuth();
-    const router = useRouter();
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [step, setStep] = useState(1);
     const [formData, setFormData] = useState<OnboardingData>(defaultFormData);
     const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
 
-    useEffect(() => {
-        if (!profileLoading && user) {
-            router.push('/');
-        }
-    }, [user, profileLoading, router]);
 
     const handleNext = () => {
         if (step < TOTAL_STEPS) {

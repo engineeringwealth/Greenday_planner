@@ -19,19 +19,36 @@ export function AuthGuard({ children }: { children: ReactNode }) {
 
     const isAuthPage = pathname === '/onboarding' || pathname === '/login';
 
-    if (!user && !isAuthPage) {
-      // If the user is not logged in and not on an auth page,
-      // redirect them to the login page.
-      router.push('/login');
-    } else if (user && (!userProfile || !userProfile.onboarded) && pathname !== '/onboarding') {
-      // If the user is logged in but has not completed onboarding,
-      // redirect them to the onboarding page.
+    // Case 1: User is not logged in.
+    if (!user) {
+      // If they are not on an auth page, redirect to login.
+      if (!isAuthPage) {
+        router.push('/login');
+      }
+      // Otherwise, they are on an auth page, so we do nothing and let them sign in/up.
+      return;
+    }
+
+    // Case 2: User is logged in.
+    const hasOnboarded = userProfile?.onboarded;
+
+    if (!hasOnboarded && pathname !== '/onboarding') {
+      // If they haven't onboarded, they must be sent to the onboarding page.
       router.push('/onboarding');
+    } else if (hasOnboarded && isAuthPage) {
+      // If they HAVE onboarded and are trying to access an auth page, send them to the app home.
+      router.push('/');
     }
   }, [user, userProfile, loading, profileLoading, pathname, router]);
 
   // Determine if we should show a loading skeleton or the actual content.
-  const showLoadingSkeleton = loading || profileLoading || !user || (!userProfile?.onboarded && pathname !== '/onboarding');
+  // We show a skeleton if we're waiting for auth data, or if the user is not yet authorized for the current page.
+  const showLoadingSkeleton = 
+    loading || 
+    profileLoading || 
+    !user || 
+    (!userProfile?.onboarded && pathname !== '/onboarding');
+
 
   if (showLoadingSkeleton) {
     return (
