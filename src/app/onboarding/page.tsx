@@ -448,6 +448,19 @@ export default function OnboardingPage() {
     const [formData, setFormData] = useState<OnboardingData>(defaultFormData);
     const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
 
+    useEffect(() => {
+        // Don't run this logic until we have definitive auth and profile state
+        if (loading || profileLoading) {
+            return;
+        }
+
+        // If a user is logged in and has already onboarded, they shouldn't be here.
+        // Redirect them to the main app to prevent them from re-onboarding.
+        if (user && userProfile?.onboarded) {
+            router.push('/');
+        }
+    }, [user, userProfile, loading, profileLoading, router]);
+
     const handleNext = () => {
         if (step < TOTAL_STEPS) {
             // Add validation logic here if needed
@@ -477,7 +490,7 @@ export default function OnboardingPage() {
                 await signUpWithEmail(email, password, finalProfileData);
             }
             toast({ title: "Welcome!", description: "Your account has been created and your plan is ready." });
-            // The auth context listener and AuthGuard will handle the redirect.
+            // The auth context listener and redirect effects will handle routing.
         } catch (error) {
             console.error("Onboarding auth failed:", error);
             // Error toast is handled by auth context
@@ -504,9 +517,10 @@ export default function OnboardingPage() {
         }
     };
     
-    // Show a loading screen while waiting for auth state or if the user is logged in
-    // and waiting for the AuthGuard to redirect them.
-    if (loading || profileLoading || user) {
+    // Show a loading screen only while waiting for the initial auth state.
+    // Unlike the login page, we don't need to show a loader if `user` exists,
+    // because this page is FOR authenticated users who haven't onboarded.
+    if (loading || profileLoading) {
         return (
             <div className="flex min-h-screen items-center justify-center bg-background">
                 <Loader2 className="h-8 w-8 animate-spin" />

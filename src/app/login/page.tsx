@@ -1,6 +1,7 @@
 
 'use client';
 
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
@@ -22,12 +23,30 @@ const signInSchema = z.object({
 export default function LoginPage() {
   const { 
     user, 
+    userProfile,
     loading, 
+    profileLoading,
     isFirebaseConfigured,
     signInWithGoogle, 
     signInWithEmail, 
   } = useAuth();
   const router = useRouter();
+
+  useEffect(() => {
+    // Don't redirect until we have a definitive auth state.
+    if (loading || profileLoading) {
+      return;
+    }
+
+    // If the user is logged in, redirect them away from the login page.
+    if (user && userProfile) {
+      if (userProfile.onboarded) {
+        router.push('/');
+      } else {
+        router.push('/onboarding');
+      }
+    }
+  }, [user, userProfile, loading, profileLoading, router]);
 
   const GoogleIcon = () => (
     <svg className="mr-2 h-4 w-4" viewBox="0 0 48 48" aria-hidden="true">
@@ -71,10 +90,9 @@ export default function LoginPage() {
     );
   };
 
-  // If we are performing the initial auth check, or if a user object exists
-  // (meaning they have just signed in), show a loading screen.
-  // The AuthGuard will handle the actual redirection.
-  if (loading || user) {
+  // If we're waiting for auth state to resolve, or if a user is logged in
+  // and we're waiting for the redirect effect to fire, show a loading screen.
+  if (loading || profileLoading || user) {
       return (
           <main className="flex min-h-screen items-center justify-center bg-background p-4">
               <div className="flex items-center">
@@ -85,7 +103,7 @@ export default function LoginPage() {
       );
   }
   
-  // If loading is finished and there is no user, we can safely show the login form.
+  // Only show the login form if all loading is complete and there is NO user.
   return (
     <main className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-sm shadow-xl">
