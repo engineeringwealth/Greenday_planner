@@ -42,35 +42,41 @@
   }
 
   .dark {
-    --background: 84 6% 12%; /* Dark charcoal with a hint of green */
-    --foreground: 90 8% 95%; /* Light gray with a hint of green */
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
 
-    --card: 90 5% 15%;
-    --card-foreground: 90 8% 95%;
+    --card: 222 47% 16%;
+    --card-foreground: 210 40% 98%;
 
-    --popover: 90 5% 15%;
-    --popover-foreground: 90 8% 95%;
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 98%;
 
-    --primary: 121 35% 55%; /* #A7D9A8 adjusted for dark mode */
-    --primary-foreground: 120 100% 5%;
+    --primary: 16 93% 65%; /* Salmon/Orange */
+    --primary-foreground: 16 93% 10%;
 
-    --secondary: 90 4% 25%;
-    --secondary-foreground: 90 8% 95%;
+    --secondary: 217 33% 25%;
+    --secondary-foreground: 210 40% 98%;
 
-    --muted: 90 4% 25%;
-    --muted-foreground: 90 5% 65%;
+    --muted: 217 33% 20%;
+    --muted-foreground: 215 20% 65%;
 
-    --accent: 46 80% 55%; /* #D4AC0D adjusted for dark mode */
-    --accent-foreground: 46 100% 5%;
+    --accent: 16 93% 65%; /* Salmon/Orange */
+    --accent-foreground: 16 93% 10%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 90 5% 20%;
-    --input: 90 5% 22%;
-    --ring: 121 35% 55%;
+    --border: 217 33% 25%;
+    --input: 217 33% 22%;
+    --ring: 16 93% 65%;
 
     --radius: 0.8rem;
+
+    --chart-1: 262 70% 66%; /* Lilac for Protein */
+    --chart-2: 120 60% 60%; /* Green for Fat */
+    --chart-3: 48 93% 54%;  /* Yellow - unused */
+    --chart-4: 16 93% 65%;  /* Orange/Salmon for Carbs */
+    --chart-5: 206 90% 56%; /* Blue for Calories */
   }
 }
 
