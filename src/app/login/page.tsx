@@ -82,14 +82,16 @@ export default function LoginPage() {
     );
   };
 
-  // The only time we should show the login form is when the initial auth check is complete (`!loading`)
-  // and there is no user logged in (`!user`).
-  if (!loading && !user) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-background p-4">
+  // Determine if we should show the login form or the loading screen.
+  // We show the form only when auth is ready and no user is signed in.
+  const showLoginForm = !loading && !user;
+  
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-background p-4">
+      {showLoginForm ? (
         <Card className="w-full max-w-sm shadow-xl">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold text-primary">GreenDay Planner</CardTitle>
+            <CardTitle className="text-2xl font-bold text-primary">Myetician</CardTitle>
             <CardDescription>Welcome back! Sign in to continue.</CardDescription>
           </CardHeader>
           <CardContent>
@@ -113,7 +115,7 @@ export default function LoginPage() {
                 </Button>
 
                 <div className="mt-6 text-center text-sm">
-                  New to GreenDay Planner?{' '}
+                  New to Myetician?{' '}
                   <Link href="/onboarding" className="font-semibold text-primary hover:underline">
                     Start the questionnaire
                   </Link>
@@ -134,16 +136,12 @@ export default function LoginPage() {
             )}
           </CardContent>
         </Card>
-      </main>
-    );
-  }
-
-  // In all other cases (e.g., initial load, or user is logged in and waiting for redirect),
-  // show a loading screen. This prevents the login form from flashing and avoids getting stuck.
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <Loader2 className="h-8 w-8 animate-spin" />
-      <p className="ml-4">Loading your experience...</p>
-    </div>
+      ) : (
+        <div className="flex items-center">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <p className="ml-4">Loading your experience...</p>
+        </div>
+      )}
+    </main>
   );
 }

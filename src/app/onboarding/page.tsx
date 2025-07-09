@@ -47,7 +47,7 @@ function StepIndicator({ step }: { step: number }) {
 function OnboardingHeader() {
     return (
         <div className="w-full flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-primary">GreenDay Planner</h1>
+            <h1 className="text-2xl font-bold text-primary">Myetician</h1>
              <p className="text-sm text-muted-foreground">
                 Already have an account?{' '}
                 <Link href="/login" className="font-semibold text-primary hover:underline">
@@ -450,7 +450,7 @@ export default function OnboardingPage() {
 
     useEffect(() => {
         // If a user is logged in and has already completed onboarding, they don't belong here.
-        // Redirect them to the main application page.
+        // Redirect them to the main application page to prevent getting stuck.
         if (user && userProfile?.onboarded) {
             router.push('/');
         }
