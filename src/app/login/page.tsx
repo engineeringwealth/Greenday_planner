@@ -49,7 +49,7 @@ export default function LoginPage() {
     if (!loading && !profileLoading && user && userProfile?.onboarded) {
       router.push('/');
     }
-  }, [user, userProfile, loading, profileLoading, router]);
+  }, [user, userProfile, loading, profileLoading]);
 
   const GoogleIcon = () => (
     <svg className="mr-2 h-4 w-4" viewBox="0 0 48 48" aria-hidden="true">
@@ -104,7 +104,7 @@ export default function LoginPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-sm shadow-xl border-primary/20">
+      <Card className="w-full max-w-sm shadow-xl">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold text-primary">Myetician</CardTitle>
           <CardDescription>Welcome back! Sign in to continue.</CardDescription>
