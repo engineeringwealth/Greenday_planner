@@ -21,7 +21,7 @@ const signInSchema = z.object({
 });
 
 function SignInForm() {
-    const { signInWithEmail } = useAuth();
+    const { signInWithEmail, loading, profileLoading } = useAuth();
     const form = useForm<z.infer<typeof signInSchema>>({
       resolver: zodResolver(signInSchema),
       defaultValues: { email: "", password: "" },
@@ -48,7 +48,7 @@ function SignInForm() {
               <FormMessage />
             </FormItem>
           )} />
-          <Button type="submit" className="w-full">Sign In</Button>
+          <Button type="submit" className="w-full" disabled={loading || profileLoading}>Sign In</Button>
         </form>
       </Form>
     );
@@ -67,14 +67,30 @@ export default function LoginPage() {
   const { 
     user, 
     loading, 
+    userProfile,
     profileLoading,
     isFirebaseConfigured,
     signInWithGoogle, 
   } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    // This effect handles the crucial redirect AFTER a user has logged in
+    // and their profile has been fully loaded.
+    if (user && !profileLoading) {
+      if (userProfile?.onboarded) {
+        router.push('/');
+      } else {
+        // This covers new signups or users who abandoned onboarding.
+        router.push('/onboarding');
+      }
+    }
+  }, [user, userProfile, profileLoading, router]);
   
-  // If we are waiting for auth state, or if the user is already logged in,
-  // show a loading screen. The AuthGuard will handle the redirect.
-  if (loading || profileLoading || user) {
+  // If the initial auth check is happening, OR if a user has logged in and
+  // we are waiting for their profile to load, show the loading screen.
+  // This is the state that prevents the app from getting stuck.
+  if (loading || user) {
       return (
           <main className="flex min-h-screen items-center justify-center bg-background p-4">
               <div className="flex items-center">
@@ -85,7 +101,7 @@ export default function LoginPage() {
       );
   }
   
-  // Only show the login form if all loading is complete and there is NO user.
+  // Only when loading is complete AND there is no user, show the login form.
   return (
     <main className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-sm shadow-xl">
