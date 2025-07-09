@@ -1,6 +1,8 @@
 
 'use client';
 
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,6 +30,16 @@ export default function LoginPage() {
     signInWithGoogle, 
     signInWithEmail, 
   } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    // If the user is logged in and their profile is loaded, redirect them away from the login page.
+    // AuthGuard, which wraps the destination page, will handle routing to the correct place (onboarding or home).
+    if (user && userProfile) {
+      router.push('/');
+    }
+  }, [user, userProfile, router]);
+
 
   const GoogleIcon = () => (
     <svg className="mr-2 h-4 w-4" viewBox="0 0 48 48" aria-hidden="true">
@@ -71,7 +83,9 @@ export default function LoginPage() {
     );
   };
 
-  if (loading || profileLoading || (user && userProfile)) {
+  // Show a loader while auth state is resolving or if a user is already logged in,
+  // which prompts the useEffect to redirect them.
+  if (loading || profileLoading || user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -96,7 +110,7 @@ export default function LoginPage() {
                   <span className="w-full border-t" />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-background px-2 text-muted-foreground">
+                  <span className="bg-card px-2 text-muted-foreground">
                     Or continue with
                   </span>
                 </div>
