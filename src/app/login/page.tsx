@@ -25,7 +25,6 @@ export default function LoginPage() {
     user, 
     loading, 
     userProfile, 
-    profileLoading, 
     isFirebaseConfigured,
     signInWithGoogle, 
     signInWithEmail, 
@@ -83,9 +82,10 @@ export default function LoginPage() {
     );
   };
 
-  // Show a loader while auth state is resolving or if a user is already logged in,
-  // which prompts the useEffect to redirect them.
-  if (loading || profileLoading || user) {
+  // If auth is still loading, or if a user is logged in (meaning we are about to redirect),
+  // show the loading screen. This prevents the login form from flashing on screen for a
+  // logged in user and fixes the race condition causing the page to get stuck.
+  if (loading || user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -96,7 +96,7 @@ export default function LoginPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-sm shadow-xl border-0">
+      <Card className="w-full max-w-sm shadow-xl">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold text-primary">Myetician</CardTitle>
           <CardDescription>Welcome back! Sign in to continue.</CardDescription>
