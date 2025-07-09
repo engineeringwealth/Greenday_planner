@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from 'next/navigation';
-import { LogOut, CalendarIcon, ChevronDown, Home, Camera, User, AreaChart, Droplet, BrainCircuit, Wheat, Container } from "lucide-react";
+import { LogOut, CalendarIcon, Home, Camera, User, AreaChart, Droplet, BrainCircuit, Wheat, Container, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -13,7 +13,7 @@ import * as mealLogService from "@/services/task-service";
 import { useToast } from "@/hooks/use-toast";
 import { MealCaptureDialog } from "@/components/task-dialog";
 import { DailyLog } from "@/components/task-list";
-import { format, eachDayOfInterval, startOfWeek, endOfWeek, isToday } from 'date-fns';
+import { format, eachDayOfInterval, startOfWeek, endOfWeek, isToday, isSameDay, addDays, subDays } from 'date-fns';
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -70,14 +70,13 @@ function MacroGauge({ title, value, goal, icon: Icon, colorClass, unit = 'g' }: 
           <Icon className="w-4 h-4 text-muted-foreground" />
         </div>
         <div className="flex flex-col items-center">
-          <div className="relative h-16 w-16">
+          <div className="relative h-14 w-14">
             <svg className="h-full w-full" viewBox="0 0 60 60">
               <circle className="text-muted/20" strokeWidth="5" stroke="currentColor" fill="transparent" r="25" cx="30" cy="30" />
               <circle className={colorClass} strokeWidth="5" stroke="currentColor" fill="transparent" r="25" cx="30" cy="30" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} style={{ transition: 'stroke-dashoffset 0.5s ease-in-out' }} transform="rotate(-90 30 30)" />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <span className="text-lg font-bold text-foreground">{Math.round(value)}<span className="text-sm">{unit}</span></span>
-              <span className="text-xs text-muted-foreground">Consumed</span>
             </div>
           </div>
         </div>
@@ -87,28 +86,56 @@ function MacroGauge({ title, value, goal, icon: Icon, colorClass, unit = 'g' }: 
   );
 }
 
-function WeekCalendar() {
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const week = eachDayOfInterval({
-    start: startOfWeek(currentDate, { weekStartsOn: 1 }), // Monday
-    end: endOfWeek(currentDate, { weekStartsOn: 1 }),
-  });
+function WeekCalendar({ selectedDate, onDateChange }: { selectedDate: Date; onDateChange: (date: Date) => void }) {
+  const [viewedDate, setViewedDate] = useState(selectedDate);
+
+  useEffect(() => {
+    setViewedDate(selectedDate);
+  }, [selectedDate]);
+
+  const week = useMemo(() => eachDayOfInterval({
+    start: startOfWeek(viewedDate, { weekStartsOn: 1 }), // Monday
+    end: endOfWeek(viewedDate, { weekStartsOn: 1 }),
+  }), [viewedDate]);
+
+  const handlePrevWeek = () => {
+    setViewedDate(subDays(viewedDate, 7));
+  };
+
+  const handleNextWeek = () => {
+    setViewedDate(addDays(viewedDate, 7));
+  };
 
   return (
-    <div className="flex justify-between items-center px-4">
-      {week.map(day => (
-        <div key={day.toString()} className="text-center">
-          <p className="text-xs text-muted-foreground">{format(day, 'E')}</p>
-          <button className={cn(
-            "mt-2 w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-colors",
-            isToday(day) ? "bg-accent text-accent-foreground" : "hover:bg-card"
-          )}>
-            {format(day, 'd')}
-          </button>
-        </div>
-      ))}
+    <div className="flex items-center justify-between px-2 sm:px-4">
+      <Button variant="ghost" size="icon" onClick={handlePrevWeek} className="h-8 w-8">
+        <ChevronLeft className="h-4 w-4" />
+      </Button>
+      <div className="flex justify-around items-center flex-grow">
+        {week.map(day => (
+          <div key={day.toString()} className="text-center">
+            <p className="text-xs text-muted-foreground">{format(day, 'E')}</p>
+            <button
+              onClick={() => onDateChange(day)}
+              className={cn(
+                "mt-2 w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-colors",
+                isSameDay(day, selectedDate)
+                  ? "bg-primary text-primary-foreground"
+                  : isToday(day)
+                    ? "bg-accent text-accent-foreground"
+                    : "hover:bg-card"
+              )}
+            >
+              {format(day, 'd')}
+            </button>
+          </div>
+        ))}
+      </div>
+      <Button variant="ghost" size="icon" onClick={handleNextWeek} className="h-8 w-8">
+        <ChevronRight className="h-4 w-4" />
+      </Button>
     </div>
-  )
+  );
 }
 
 export function CalorieTracker() {
@@ -118,6 +145,7 @@ export function CalorieTracker() {
   const [mealLogs, setMealLogs] = useState<MealLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
 
   const dailyGoal = userProfile?.dailyCalorieGoal ?? 2000;
   // Use calculated defaults if profile doesn't have them yet (for backward compatibility)
@@ -128,7 +156,7 @@ export function CalorieTracker() {
   useEffect(() => {
     if (user) {
       setIsLoading(true);
-      const unsubscribe = mealLogService.getMealLogs(user.uid, (newLogs) => {
+      const unsubscribe = mealLogService.getMealLogs(user.uid, selectedDate, (newLogs) => {
         setMealLogs(newLogs);
         setIsLoading(false);
       }, (error) => {
@@ -141,7 +169,7 @@ export function CalorieTracker() {
       setMealLogs([]);
       setIsLoading(false);
     }
-  }, [user, toast]);
+  }, [user, toast, selectedDate]);
 
   const handleAddMealLog = async (mealData: Omit<MealLog, "id" | "createdAt">) => {
     if (!user) return;
@@ -178,11 +206,10 @@ export function CalorieTracker() {
     <div className="relative bg-background flex flex-col h-full max-h-screen sm:max-h-[90vh]">
       {/* Header */}
       <header className="flex items-center justify-between p-4 flex-shrink-0">
-        <button className="flex items-center gap-2 font-semibold">
+        <div className="flex items-center gap-2 font-semibold">
           <CalendarIcon className="w-5 h-5 text-muted-foreground" />
-          <span>{format(new Date(), 'MMMM')}</span>
-          <ChevronDown className="w-4 h-4 text-muted-foreground" />
-        </button>
+          <span>{isToday(selectedDate) ? "Today" : format(selectedDate, 'MMMM d')}</span>
+        </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Avatar className="h-10 w-10 cursor-pointer">
@@ -214,13 +241,13 @@ export function CalorieTracker() {
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto p-4 space-y-6">
-        <WeekCalendar />
+        <WeekCalendar selectedDate={selectedDate} onDateChange={setSelectedDate} />
 
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-          <div className="lg:col-span-2">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="md:col-span-2">
             <CalorieGauge consumed={totals.calories} goal={dailyGoal} />
           </div>
-          <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div className="md:col-span-3 grid grid-cols-3 gap-2">
             <MacroGauge title="Protein" value={totals.protein} goal={proteinGoal} icon={BrainCircuit} colorClass="text-chart-1" />
             <MacroGauge title="Carbs" value={totals.carbs} goal={carbsGoal} icon={Wheat} colorClass="text-chart-4" />
             <MacroGauge title="Fat" value={totals.fat} goal={fatGoal} icon={Container} colorClass="text-chart-2" />
@@ -228,7 +255,9 @@ export function CalorieTracker() {
         </div>
 
         <div>
-          <h2 className="text-xl font-bold mb-4">Today's Log</h2>
+          <h2 className="text-xl font-bold mb-4">
+            {isToday(selectedDate) ? "Today's Log" : `${format(selectedDate, 'MMMM d')} Log`}
+          </h2>
           <DailyLog
             mealLogs={mealLogs}
             isLoading={isLoading}

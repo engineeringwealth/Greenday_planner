@@ -25,18 +25,19 @@ const getMealLogsCollection = (userId: string) => {
 
 export const getMealLogs = (
     userId: string, 
+    date: Date,
     onLogsUpdated: (logs: MealLog[]) => void,
     onError: (error: Error) => void
 ): (() => void) => {
   const mealLogsCollection = getMealLogsCollection(userId);
   
-  const todayStart = startOfDay(new Date());
-  const todayEnd = endOfDay(new Date());
+  const dayStart = startOfDay(date);
+  const dayEnd = endOfDay(date);
 
   const q = query(
       mealLogsCollection, 
-      where('createdAt', '>=', todayStart),
-      where('createdAt', '<=', todayEnd),
+      where('createdAt', '>=', dayStart),
+      where('createdAt', '<=', dayEnd),
       orderBy('createdAt', 'desc')
   );
   
