@@ -39,7 +39,7 @@ export function AuthGuard({ children }: { children: ReactNode }) {
       // If they HAVE onboarded and are trying to access an auth page, send them to the app home.
       router.push('/');
     }
-  }, [user, userProfile, loading, profileLoading, pathname, router]);
+  }, [user, userProfile, loading, profileLoading, pathname]);
 
   // Determine if we should show a loading skeleton or the actual content.
   // We show a skeleton if we're waiting for auth data, or if the user is not yet authorized for the current page.

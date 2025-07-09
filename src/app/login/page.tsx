@@ -1,7 +1,6 @@
 
 'use client';
 
-import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
@@ -24,21 +23,11 @@ export default function LoginPage() {
   const { 
     user, 
     loading, 
-    userProfile, 
     isFirebaseConfigured,
     signInWithGoogle, 
     signInWithEmail, 
   } = useAuth();
   const router = useRouter();
-
-  useEffect(() => {
-    // If the user is logged in and their profile is loaded, redirect them away from the login page.
-    // AuthGuard on the destination page will handle any further routing (e.g., to onboarding).
-    if (user && userProfile) {
-      router.push('/');
-    }
-  }, [user, userProfile, router]);
-
 
   const GoogleIcon = () => (
     <svg className="mr-2 h-4 w-4" viewBox="0 0 48 48" aria-hidden="true">
@@ -82,66 +71,70 @@ export default function LoginPage() {
     );
   };
 
-  // Determine if we should show the login form or the loading screen.
-  // We show the form only when auth is ready and no user is signed in.
-  const showLoginForm = !loading && !user;
+  // If we are performing the initial auth check, or if a user object exists
+  // (meaning they have just signed in), show a loading screen.
+  // The AuthGuard will handle the actual redirection.
+  if (loading || user) {
+      return (
+          <main className="flex min-h-screen items-center justify-center bg-background p-4">
+              <div className="flex items-center">
+                  <Loader2 className="h-8 w-8 animate-spin" />
+                  <p className="ml-4">Loading your experience...</p>
+              </div>
+          </main>
+      );
+  }
   
+  // If loading is finished and there is no user, we can safely show the login form.
   return (
     <main className="flex min-h-screen items-center justify-center bg-background p-4">
-      {showLoginForm ? (
-        <Card className="w-full max-w-sm shadow-xl">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold text-primary">Myetician</CardTitle>
-            <CardDescription>Welcome back! Sign in to continue.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isFirebaseConfigured ? (
-              <>
-                <SignInForm />
-                <div className="relative my-4">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-card px-2 text-muted-foreground">
-                      Or continue with
-                    </span>
-                  </div>
+      <Card className="w-full max-w-sm shadow-xl">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl font-bold text-primary">Myetician</CardTitle>
+          <CardDescription>Welcome back! Sign in to continue.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isFirebaseConfigured ? (
+            <>
+              <SignInForm />
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
                 </div>
-
-                <Button onClick={() => signInWithGoogle()} className="w-full" variant="outline">
-                  <GoogleIcon />
-                  Sign in with Google
-                </Button>
-
-                <div className="mt-6 text-center text-sm">
-                  New to Myetician?{' '}
-                  <Link href="/onboarding" className="font-semibold text-primary hover:underline">
-                    Start the questionnaire
-                  </Link>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">
+                    Or continue with
+                  </span>
                 </div>
-              </>
-            ) : (
-              <Alert variant="destructive">
-                <Terminal className="h-4 w-4" />
-                <AlertTitle>Firebase Not Configured</AlertTitle>
-                <AlertDescription>
-                  Your Firebase API key is missing. Please add it to your{' '}
-                  <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold">
-                    .env.local
-                  </code>{' '}
-                  file.
-                </AlertDescription>
-              </Alert>
-            )}
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="flex items-center">
-          <Loader2 className="h-8 w-8 animate-spin" />
-          <p className="ml-4">Loading your experience...</p>
-        </div>
-      )}
+              </div>
+
+              <Button onClick={() => signInWithGoogle()} className="w-full" variant="outline">
+                <GoogleIcon />
+                Sign in with Google
+              </Button>
+
+              <div className="mt-6 text-center text-sm">
+                New to Myetician?{' '}
+                <Link href="/onboarding" className="font-semibold text-primary hover:underline">
+                  Start the questionnaire
+                </Link>
+              </div>
+            </>
+          ) : (
+            <Alert variant="destructive">
+              <Terminal className="h-4 w-4" />
+              <AlertTitle>Firebase Not Configured</AlertTitle>
+              <AlertDescription>
+                Your Firebase API key is missing. Please add it to your{' '}
+                <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold">
+                  .env.local
+                </code>{' '}
+                file.
+              </AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
     </main>
   );
 }

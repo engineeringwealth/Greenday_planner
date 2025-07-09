@@ -448,15 +448,6 @@ export default function OnboardingPage() {
     const [formData, setFormData] = useState<OnboardingData>(defaultFormData);
     const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
 
-    useEffect(() => {
-        // If a user is logged in and has already completed onboarding, they don't belong here.
-        // Redirect them to the main application page to prevent getting stuck.
-        if (user && userProfile?.onboarded) {
-            router.push('/');
-        }
-    }, [user, userProfile, router]);
-
-
     const handleNext = () => {
         if (step < TOTAL_STEPS) {
             // Add validation logic here if needed
@@ -486,7 +477,7 @@ export default function OnboardingPage() {
                 await signUpWithEmail(email, password, finalProfileData);
             }
             toast({ title: "Welcome!", description: "Your account has been created and your plan is ready." });
-            // The auth context listener will handle the redirect to '/'
+            // The auth context listener and AuthGuard will handle the redirect.
         } catch (error) {
             console.error("Onboarding auth failed:", error);
             // Error toast is handled by auth context
@@ -513,19 +504,14 @@ export default function OnboardingPage() {
         }
     };
     
-    // Show a loading screen while waiting for auth state or the user's profile to load.
-    if (loading || profileLoading) {
+    // Show a loading screen while waiting for auth state or if the user is logged in
+    // and waiting for the AuthGuard to redirect them.
+    if (loading || profileLoading || user) {
         return (
             <div className="flex min-h-screen items-center justify-center bg-background">
                 <Loader2 className="h-8 w-8 animate-spin" />
             </div>
         );
-    }
-    
-    // If a user is logged in and onboarded, the useEffect above will redirect them.
-    // We can render null here to prevent the form from flashing while that happens.
-    if (user && userProfile) {
-        return null;
     }
     
     return (
