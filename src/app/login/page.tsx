@@ -52,7 +52,7 @@ export default function LoginPage() {
         router.push('/onboarding');
       }
     }
-  }, [user, userProfile, loading, profileLoading, router]);
+  }, [user, userProfile, loading, profileLoading]);
 
   const GoogleIcon = () => (
     <svg className="mr-2 h-4 w-4" viewBox="0 0 48 48" aria-hidden="true">

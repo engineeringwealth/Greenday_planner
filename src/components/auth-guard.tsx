@@ -26,7 +26,7 @@ export function AuthGuard({ children }: { children: ReactNode }) {
         router.push('/onboarding');
       }
     }
-  }, [user, userProfile, loading, profileLoading, router, pathname]);
+  }, [user, userProfile, loading, profileLoading, pathname]);
 
   // Determine if we should show a loading skeleton or the actual content.
   const showLoadingSkeleton = loading || profileLoading || !user || (!userProfile?.onboarded && pathname !== '/onboarding');
