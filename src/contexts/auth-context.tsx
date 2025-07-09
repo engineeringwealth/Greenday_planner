@@ -100,6 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     switch (error.code) {
       case 'auth/user-not-found':
       case 'auth/wrong-password':
+      case 'auth/invalid-credential':
         message = 'Invalid email or password. Please try again.';
         break;
       case 'auth/email-already-in-use':
