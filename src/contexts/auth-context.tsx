@@ -155,9 +155,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!existingProfile?.onboarded && onboardingData) {
         // This is a new user signing up via onboarding
         await processOnboarding(user.uid, onboardingData);
+        // After onboarding is processed, we must update the profile in our context.
+        await fetchUserProfile(user.uid);
       }
       // For existing users, onAuthStateChanged will fetch their profile.
-      // After processing, router will push to '/'
+      // The auth guard will handle redirection based on the now-fresh profile.
     } catch (error) {
       handleAuthError(error as AuthError);
     }
@@ -167,7 +169,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!auth) return;
     try {
       const result = await createUserWithEmailAndPassword(auth, email, password);
-      await processOnboarding(result.user.uid, onboardingData);
+      const user = result.user;
+      await processOnboarding(user.uid, onboardingData);
+      // After onboarding is processed, we must update the profile in our context.
+      await fetchUserProfile(user.uid);
     } catch (error) {
       handleAuthError(error as AuthError);
     }
