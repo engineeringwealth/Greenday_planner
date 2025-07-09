@@ -44,15 +44,12 @@ export default function LoginPage() {
   }, []);
 
   useEffect(() => {
-    // Wait for auth and profile to be loaded
-    if (!loading && !profileLoading) {
-      if (user && userProfile?.onboarded) {
-        router.push('/');
-      } else if (user && (!userProfile || !userProfile.onboarded)) {
-        router.push('/onboarding');
-      }
+    // If the user is already logged in and onboarded, redirect them away from the login page.
+    // The AuthGuard will handle protecting other routes.
+    if (!loading && !profileLoading && user && userProfile?.onboarded) {
+      router.push('/');
     }
-  }, [user, userProfile, loading, profileLoading]);
+  }, [user, userProfile, loading, profileLoading, router]);
 
   const GoogleIcon = () => (
     <svg className="mr-2 h-4 w-4" viewBox="0 0 48 48" aria-hidden="true">
