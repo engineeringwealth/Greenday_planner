@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
             return new NextResponse(JSON.stringify({ error: 'Stripe Price ID is not configured' }), { status: 500 });
         }
         
-        const origin = headers().get('origin') || 'http://localhost:9002';
+        const origin = headers().get('origin') || 'http://localhost:9003';
         
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
