@@ -17,7 +17,7 @@ interface MealCaptureDialogProps {
   onSubmit: (data: Omit<MealLog, "id" | "createdAt">) => void;
 }
 
-const resizeImage = (dataUri: string, maxWidth = 1024, maxHeight = 1024): Promise<string> => {
+const resizeImage = (dataUri: string, maxWidth = 800, maxHeight = 800): Promise<string> => {
     return new Promise((resolve, reject) => {
         const img = new Image();
         img.onload = () => {
@@ -43,7 +43,7 @@ const resizeImage = (dataUri: string, maxWidth = 1024, maxHeight = 1024): Promis
                 return reject(new Error('Could not get canvas context'));
             }
             ctx.drawImage(img, 0, 0, width, height);
-            resolve(canvas.toDataURL('image/jpeg', 0.9)); // Use JPEG for smaller size
+            resolve(canvas.toDataURL('image/jpeg', 0.85)); // Use JPEG with slightly lower quality
         };
         img.onerror = (err) => reject(err);
         img.src = dataUri;
