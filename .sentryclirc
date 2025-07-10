@@ -1,0 +1,7 @@
+[defaults]
+org = YOUR_SENTRY_ORG_SLUG
+project = YOUR_SENTRY_PROJECT_SLUG
+# This is the auth token for the Sentry CLI.
+# You can get it from https://sentry.io/settings/account/api/auth-tokens/
+# It needs the `project:releases` and `org:read` scopes.
+authToken = YOUR_SENTRY_AUTH_TOKEN
