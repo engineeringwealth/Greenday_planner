@@ -15,7 +15,7 @@ import {
 import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { getUserProfile, updateUserProfile } from '@/services/user-service';
+import { getUserProfile, updateUserProfile, addWeightHistory } from '@/services/user-service';
 import type { UserProfile, OnboardingData } from '@/lib/types';
 import { calculateHealthMetrics } from '@/lib/health-utils';
 
@@ -132,6 +132,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ...onboardingData,
       ...healthMetrics,
       onboarded: true,
+      subscriptionStatus: 'free',
+      analysisCount: 0,
     };
     
     // Convert units to imperial for storage
@@ -142,6 +144,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     await updateUserProfile(uid, finalProfileData);
+    await addWeightHistory(uid, finalProfileData.currentWeight as number);
   }
 
   const signInWithGoogle = async (onboardingData?: OnboardingData) => {
@@ -155,11 +158,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!existingProfile?.onboarded && onboardingData) {
         // This is a new user signing up via onboarding
         await processOnboarding(user.uid, onboardingData);
-        // After onboarding is processed, we must update the profile in our context.
-        await fetchUserProfile(user.uid);
       }
-      // For existing users, onAuthStateChanged will fetch their profile.
-      // The auth guard will handle redirection based on the now-fresh profile.
+      // After processing, always fetch the latest profile to update context state
+      await fetchUserProfile(user.uid);
+      // AuthGuard will handle redirection based on the now-fresh profile.
+      if (onboardingData) {
+        router.push('/');
+      }
     } catch (error) {
       handleAuthError(error as AuthError);
     }
@@ -171,8 +176,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const result = await createUserWithEmailAndPassword(auth, email, password);
       const user = result.user;
       await processOnboarding(user.uid, onboardingData);
-      // After onboarding is processed, we must update the profile in our context.
       await fetchUserProfile(user.uid);
+      router.push('/');
     } catch (error) {
       handleAuthError(error as AuthError);
     }

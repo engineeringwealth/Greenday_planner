@@ -10,6 +10,9 @@ import { useToast } from "@/hooks/use-toast";
 import { analyzeMeal, type AnalyzeMealOutput } from "@/ai/flows/analyze-meal-flow";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import type { MealLog, FoodItem } from "@/lib/types";
+import { useAuth } from "@/contexts/auth-context";
+import { useRouter } from "next/navigation";
+import { updateUserProfile } from "@/services/user-service";
 
 interface MealCaptureDialogProps {
   isOpen: boolean;
@@ -53,6 +56,8 @@ const resizeImage = (dataUri: string, maxWidth = 800, maxHeight = 800): Promise<
 
 export function MealCaptureDialog({ isOpen, setIsOpen, onSubmit }: MealCaptureDialogProps) {
   const { toast } = useToast();
+  const router = useRouter();
+  const { user, userProfile, refetchUserProfile } = useAuth();
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -62,6 +67,11 @@ export function MealCaptureDialog({ isOpen, setIsOpen, onSubmit }: MealCaptureDi
   const [analysisResult, setAnalysisResult] = useState<AnalyzeMealOutput | null>(null);
   const [photoDataUri, setPhotoDataUri] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const trialsUsed = userProfile?.analysisCount ?? 0;
+  const hasPaidSubscription = userProfile?.subscriptionStatus === 'paid';
+  const freeTrialAvailable = trialsUsed < 1;
+  const canAnalyze = hasPaidSubscription || freeTrialAvailable;
 
   useEffect(() => {
     if (isOpen) {
@@ -150,6 +160,11 @@ export function MealCaptureDialog({ isOpen, setIsOpen, onSubmit }: MealCaptureDi
 
   const handleAnalyze = async () => {
     if (!photoDataUri) return;
+    if (!user || !userProfile) {
+        toast({ title: "Authentication Error", description: "You must be signed in to analyze meals.", variant: "destructive" });
+        return;
+    }
+
     setIsAnalyzing(true);
     setError(null);
     setAnalysisResult(null);
@@ -159,6 +174,11 @@ export function MealCaptureDialog({ isOpen, setIsOpen, onSubmit }: MealCaptureDi
         throw new Error("Could not identify any food items. Please try another photo.");
       }
       setAnalysisResult(result);
+      // Increment analysis count on success
+      if (!hasPaidSubscription) {
+        await updateUserProfile(user.uid, { analysisCount: trialsUsed + 1 });
+        await refetchUserProfile();
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "An unknown error occurred during analysis.";
       setError(errorMessage);
@@ -182,7 +202,7 @@ export function MealCaptureDialog({ isOpen, setIsOpen, onSubmit }: MealCaptureDi
         totalProtein,
         totalCarbs,
         totalFat,
-        photoUrl: photoDataUri, // In a real app, upload this to storage and get a URL
+        photoUrl: photoDataUri,
     });
     handleClose();
   };
@@ -223,10 +243,27 @@ export function MealCaptureDialog({ isOpen, setIsOpen, onSubmit }: MealCaptureDi
           {photoDataUri && !analysisResult && (
              <div className="space-y-4">
                 <img src={photoDataUri} alt="Meal preview" className="rounded-md w-full" />
-                <Button onClick={handleAnalyze} disabled={isAnalyzing} className="w-full">
-                  {isAnalyzing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                  {isAnalyzing ? "Analyzing..." : "Analyze Meal"}
-                </Button>
+                {canAnalyze ? (
+                    <Button onClick={handleAnalyze} disabled={isAnalyzing} className="w-full">
+                        {isAnalyzing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                        {isAnalyzing ? "Analyzing..." : `Analyze Meal ${!hasPaidSubscription ? `(1 of 1 trial used)` : ''}`}
+                    </Button>
+                ) : (
+                    <Card className="text-center p-4 bg-card/50 border-primary">
+                        <CardHeader className="p-2">
+                            <CardTitle>Free Trial Used</CardTitle>
+                            <CardDescription>Subscribe to continue analyzing meals.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="p-2">
+                            <Button onClick={() => {
+                                handleClose();
+                                router.push('/subscribe');
+                            }} className="w-full">
+                                Subscribe to Pro
+                            </Button>
+                        </CardContent>
+                    </Card>
+                )}
              </div>
           )}
 

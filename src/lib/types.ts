@@ -1,5 +1,6 @@
 
 
+
 export interface FoodItem {
   name: string;
   calories: number;
@@ -47,6 +48,10 @@ export interface UserProfile extends OnboardingData {
   dailyProteinGoal: number; 
   dailyCarbsGoal: number;
   dailyFatGoal: number;
+
+  // Subscription details
+  subscriptionStatus: 'free' | 'paid';
+  analysisCount: number;
 }
 
 export interface WeightHistoryEntry {
