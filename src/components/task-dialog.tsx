@@ -17,6 +17,40 @@ interface MealCaptureDialogProps {
   onSubmit: (data: Omit<MealLog, "id" | "createdAt">) => void;
 }
 
+const resizeImage = (dataUri: string, maxWidth = 1024, maxHeight = 1024): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let { width, height } = img;
+
+            if (width > height) {
+                if (width > maxWidth) {
+                    height = Math.round((height * maxWidth) / width);
+                    width = maxWidth;
+                }
+            } else {
+                if (height > maxHeight) {
+                    width = Math.round((width * maxHeight) / height);
+                    height = maxHeight;
+                }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                return reject(new Error('Could not get canvas context'));
+            }
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL('image/jpeg', 0.9)); // Use JPEG for smaller size
+        };
+        img.onerror = (err) => reject(err);
+        img.src = dataUri;
+    });
+};
+
+
 export function MealCaptureDialog({ isOpen, setIsOpen, onSubmit }: MealCaptureDialogProps) {
   const { toast } = useToast();
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -77,7 +111,7 @@ export function MealCaptureDialog({ isOpen, setIsOpen, onSubmit }: MealCaptureDi
     setError(null);
   };
 
-  const capturePhoto = () => {
+  const capturePhoto = async () => {
     if (!videoRef.current || !canvasRef.current) return;
     const video = videoRef.current;
     const canvas = canvasRef.current;
@@ -86,15 +120,29 @@ export function MealCaptureDialog({ isOpen, setIsOpen, onSubmit }: MealCaptureDi
     const context = canvas.getContext('2d');
     context?.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
     const dataUri = canvas.toDataURL('image/jpeg');
-    setPhotoDataUri(dataUri);
+    
+    try {
+        const resizedUri = await resizeImage(dataUri);
+        setPhotoDataUri(resizedUri);
+    } catch (err) {
+        console.error("Failed to resize image", err);
+        setError("Could not process the captured photo. Please try again.");
+    }
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = (e) => {
-        setPhotoDataUri(e.target?.result as string);
+      reader.onload = async (e) => {
+        const dataUri = e.target?.result as string;
+        try {
+            const resizedUri = await resizeImage(dataUri);
+            setPhotoDataUri(resizedUri);
+        } catch (err) {
+            console.error("Failed to resize image", err);
+            setError("Could not process the uploaded photo. Please try again.");
+        }
       };
       reader.readAsDataURL(file);
     }
