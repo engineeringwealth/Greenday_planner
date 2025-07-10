@@ -242,7 +242,29 @@ function ProfilePageContent() {
                        </div>
                     </div>
                     
-                     <Card className="bg-card/80 mt-8">
+                    <Card className="bg-card/80">
+                        <CardHeader>
+                            <CardTitle className="text-lg">Subscription Plan</CardTitle>
+                        </CardHeader>
+                        <CardContent className="text-center">
+                             {userProfile?.subscriptionStatus === 'paid' ? (
+                                <div>
+                                    <p className="text-2xl font-bold text-primary">Myetician Pro</p>
+                                    <p className="text-sm text-muted-foreground mt-1">Thank you for being a Pro member!</p>
+                                </div>
+                            ) : (
+                                <div>
+                                    <p className="text-2xl font-bold">Free Tier</p>
+                                    <p className="text-sm text-muted-foreground mt-1">You have used {userProfile?.analysisCount ?? 0} of 1 free analysis.</p>
+                                    <Button onClick={() => router.push('/subscribe')} className="mt-4">
+                                        Upgrade to Pro
+                                    </Button>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                     <Card className="bg-card/80">
                         <CardHeader>
                             <CardTitle className="text-lg">Estimated Daily Goals</CardTitle>
                         </CardHeader>
