@@ -5,7 +5,7 @@ import { useState, useRef, useEffect } from "react";
 import { Camera, Loader2, Upload, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription as CardDescriptionComponent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { analyzeMeal, type AnalyzeMealOutput } from "@/ai/flows/analyze-meal-flow";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -20,7 +20,7 @@ interface MealCaptureDialogProps {
   onSubmit: (data: Omit<MealLog, "id" | "createdAt">) => void;
 }
 
-const resizeImage = (dataUri: string, maxWidth = 800, maxHeight = 800): Promise<string> => {
+const resizeImage = (dataUri: string, maxWidth = 400, maxHeight = 400): Promise<string> => {
     return new Promise((resolve, reject) => {
         const img = new Image();
         img.onload = () => {
@@ -46,7 +46,7 @@ const resizeImage = (dataUri: string, maxWidth = 800, maxHeight = 800): Promise<
                 return reject(new Error('Could not get canvas context'));
             }
             ctx.drawImage(img, 0, 0, width, height);
-            resolve(canvas.toDataURL('image/jpeg', 0.85)); // Use JPEG with slightly lower quality
+            resolve(canvas.toDataURL('image/jpeg', 0.8)); // Use JPEG with slightly lower quality
         };
         img.onerror = (err) => reject(err);
         img.src = dataUri;
@@ -252,7 +252,7 @@ export function MealCaptureDialog({ isOpen, setIsOpen, onSubmit }: MealCaptureDi
                     <Card className="text-center p-4 bg-card/50 border-primary">
                         <CardHeader className="p-2">
                             <CardTitle>Free Trial Used</CardTitle>
-                            <CardDescription>Subscribe to continue analyzing meals.</CardDescription>
+                            <CardDescriptionComponent>Subscribe to continue analyzing meals.</CardDescriptionComponent>
                         </CardHeader>
                         <CardContent className="p-2">
                             <Button onClick={() => {
