@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { LogOut, CalendarIcon, Home, Camera, User, AreaChart, Droplet, BrainCircuit, Wheat, Container, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -141,6 +141,7 @@ function WeekCalendar({ selectedDate, onDateChange }: { selectedDate: Date; onDa
 export function CalorieTracker() {
   const { user, signOut, userProfile } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const [mealLogs, setMealLogs] = useState<MealLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -152,6 +153,17 @@ export function CalorieTracker() {
   const proteinGoal = userProfile?.dailyProteinGoal ?? Math.round((dailyGoal * 0.3) / 4);
   const carbsGoal = userProfile?.dailyCarbsGoal ?? Math.round((dailyGoal * 0.4) / 4);
   const fatGoal = userProfile?.dailyFatGoal ?? Math.round((dailyGoal * 0.3) / 9);
+
+  useEffect(() => {
+    if (searchParams.get('subscribed') === 'true') {
+        toast({
+            title: "Subscription Successful!",
+            description: "Welcome to Myetician Pro! Your account has been upgraded.",
+        });
+        // It's good practice to clean up the URL
+        router.replace('/', { scroll: false });
+    }
+  }, [searchParams, toast, router]);
 
   useEffect(() => {
     if (user) {
